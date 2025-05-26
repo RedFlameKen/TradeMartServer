@@ -29,7 +29,7 @@ create table if not exists text_messages (
     date_sent datetime,
     user_id int,
     foreign key(user_id) references user(user_id),
-    foreign key(target_user_id) references user(target_user_id)
+    foreign key(target_user_id) references user(user_id)
 );
 
 create table if not exists job_posting (
@@ -55,6 +55,6 @@ create table if not exists media (
 
 create table if not exists report_content (
     report_id int primary key auto_increment,
-    report_type varchar(255),
+    report_type varchar(255)
 );
 
