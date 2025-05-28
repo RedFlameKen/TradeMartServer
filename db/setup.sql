@@ -2,23 +2,24 @@ create database if not exists trademart;
 
 use trademart;
 
-create table if not exists user (
+create table if not exists users (
     user_id int primary key auto_increment,
     name varchar(256),
     email varchar(256),
     password varchar(256),
+    password_salt varchar(256),
     prefered_posts varchar(128),
     verified bit
 );
 
-create table if not exists skill_card (
+create table if not exists skill_cards (
     skill_card_id int primary key auto_increment,
     skill_title varchar(256),
     skill_description varchar(1024),
     tags varchar(1024),
     video_url varchar(2000),
     user_id int,
-    foreign key(user_id) references user(user_id)
+    foreign key(user_id) references users(user_id)
 );
 
 create table if not exists text_messages (
@@ -28,11 +29,11 @@ create table if not exists text_messages (
     response_text varchar(4096),
     date_sent datetime,
     user_id int,
-    foreign key(user_id) references user(user_id),
-    foreign key(target_user_id) references user(user_id)
+    foreign key(user_id) references users(user_id),
+    foreign key(target_user_id) references users(user_id)
 );
 
-create table if not exists job_posting (
+create table if not exists job_postings (
     job_id int primary key auto_increment,
     job_title varchar(255),
     job_type varchar(128),
@@ -41,7 +42,7 @@ create table if not exists job_posting (
     date_posted datetime,
     image_attachment_url varchar(2000),
     user_id int,
-    foreign key(user_id) references user(user_id)
+    foreign key(user_id) references users(user_id)
 );
 
 create table if not exists media (
@@ -50,10 +51,10 @@ create table if not exists media (
     media_url varchar(2000),
     date_uploaded datetime,
     user_id int,
-    foreign key(user_id) references user(user_id)
+    foreign key(user_id) references users(user_id)
 );
 
-create table if not exists report_content (
+create table if not exists report_contents (
     report_id int primary key auto_increment,
     report_type varchar(255)
 );
