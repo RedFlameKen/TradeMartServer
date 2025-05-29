@@ -78,6 +78,19 @@ public class DatabaseController {
         return 0;
     }
 
+    public int getRowCountDB(String tableName){
+        int rows = 0;
+        try {
+            ResultSet rs = execQuery(String.format("select COUNT(*) from %s", tableName));
+            if(rs.next())
+                rows = rs.getRow();
+        } catch (SQLException e) {
+            Logger.log("Unable to count rows from db", LogLevel.WARNING);
+            e.printStackTrace();
+        }
+        return rows;
+    }
+
     public void exec(String command) throws SQLException{
         Statement stmt = connection.createStatement();
         stmt.execute(command);

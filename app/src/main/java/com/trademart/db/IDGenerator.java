@@ -10,8 +10,9 @@ public class IDGenerator {
     public static int generateDBID(DatabaseController dbController, String tableName, String idName) {
         int[] ids = null;
         try {
+            int rows = dbController.getRowCountDB(tableName);
             ResultSet rs = dbController.execQuery(String.format("select %s from %s", idName, tableName));
-            ids = new int[rs.getFetchSize()];
+            ids = new int[rows];
             int i = 0;
             while(rs.next()){
                 ids[i++] = rs.getInt(idName);

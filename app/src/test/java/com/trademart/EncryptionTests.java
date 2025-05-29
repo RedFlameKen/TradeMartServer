@@ -14,7 +14,7 @@ public class EncryptionTests {
 
     @Test
     public void test_Encryption(){
-        String password = "FunnyPassword";
+        String password = "DifferentFunnyPassword";
         Encryptor encryptor = new Encryptor();
         String encryptedPassword = encryptor.encrypt(password);
         System.out.printf("The Encrypted Password: %s\n", encryptedPassword);
