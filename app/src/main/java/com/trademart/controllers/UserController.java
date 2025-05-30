@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.springframework.http.ResponseEntity;
@@ -36,7 +37,12 @@ public class UserController {
 
     @PostMapping("/user/signup")
     public ResponseEntity<String> createUser(@RequestBody String userData){
-        JSONObject json = new JSONObject(new JSONTokener(userData));
+        JSONObject json = null;
+        try {
+        json = new JSONObject(new JSONTokener(userData));
+        } catch (JSONException e){
+            return ResponseEntity.badRequest().body("");
+        }
         User createdUser = userCreationProcess(json);
         URI location = URI.create(new StringBuilder()
                 .append("/user/")
