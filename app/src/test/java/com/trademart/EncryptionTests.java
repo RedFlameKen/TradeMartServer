@@ -26,7 +26,7 @@ public class EncryptionTests {
         assertEquals(password, decryptedPassword);
     }
     
-    // @Test
+    @Test
     public void test_Hash(){
         String password = "TheUltimatePassword";
         Hasher hasher = new Hasher();
@@ -38,7 +38,7 @@ public class EncryptionTests {
         assertTrue(Hasher.hashMatches(checkedPassword, hashedPassword, salt));
     }
 
-    // @Test
+    @Test
     public void test_HashWrong(){
         String password = "TheUltimatePassword";
         Hasher hasher = new Hasher();

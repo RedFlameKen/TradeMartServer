@@ -119,10 +119,10 @@ public class UserController {
 
     private String createUserCreationResponse(User user){
         JSONObject json = new JSONObject();
-        json.append("id", user.getId());
-        json.append("name", user.getName());
-        json.append("email", user.getEmail());
-        json.append("password", user.getPassword());
+        json.put("id", user.getId());
+        json.put("name", user.getName());
+        json.put("email", user.getEmail());
+        json.put("password", user.getPassword());
         return json.toString();
     }
 
