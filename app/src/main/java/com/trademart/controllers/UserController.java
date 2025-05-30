@@ -39,7 +39,7 @@ public class UserController {
     public ResponseEntity<String> createUser(@RequestBody String userData){
         JSONObject json = null;
         try {
-        json = new JSONObject(new JSONTokener(userData));
+            json = new JSONObject(new JSONTokener(userData));
         } catch (JSONException e){
             return ResponseEntity.badRequest().body("");
         }

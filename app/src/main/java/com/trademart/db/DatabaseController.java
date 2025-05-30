@@ -83,7 +83,7 @@ public class DatabaseController {
         try {
             ResultSet rs = execQuery(String.format("select COUNT(*) from %s", tableName));
             if(rs.next())
-                rows = rs.getRow();
+                rows = rs.getInt(1);
         } catch (SQLException e) {
             Logger.log("Unable to count rows from db", LogLevel.WARNING);
             e.printStackTrace();
