@@ -17,6 +17,26 @@ gradle.bat build
 ```
 
 ## Running 
+The server will look try to connect to a mysql database as soon as it starts so
+make sure that a mysql server is running on your machine before you run the
+server.
+
+The server also looks for a ".dbconfig.json" configuration file for the
+database connection allowing for flexibility with different machines and
+setups. The configuration file is ignored in git for security reasons, so make
+sure to make it yourself. The file should be made under the `app` directory.
+Here is an example ".dbconfig.json" file:
+
+```json
+{
+    "db_name": "trademart",
+    "username": "root",
+    "password": "root",
+    "address": "localhost",
+    "port": 3306
+}
+```
+
 Since this project uses gradle, It would be much easier to run the project
 through the gradle wrapper script.
 
