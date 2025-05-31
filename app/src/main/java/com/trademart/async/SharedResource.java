@@ -19,7 +19,9 @@ public class SharedResource {
     }
 
     private void initResources() {
-        databaseController.connect();
+        if(databaseController.connect() == -1){
+            System.exit(1);
+        }
     }
 
     public void lock() throws InterruptedException{
