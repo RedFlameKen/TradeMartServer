@@ -57,13 +57,15 @@ public class UserController {
         }
         URI location = URI.create("");
         JSONObject response = userCreationProcess(json);
-        if(response.getString("status").equals("sucess")){
+        if (response.getString("status").equals("success")) {
+            JSONObject userJson = response.getJSONObject("user_data");
             location = URI.create(new StringBuilder()
                     .append("/user/")
-                    .append(response.getString("user_id"))
+                    .append(userJson.getInt("user_id"))
                     .toString());
+            return ResponseEntity.created(location).body(response.toString());
         }
-        return ResponseEntity.created(location).body(response.toString());
+        return ResponseEntity.ok().body(response.toString());
     }
 
     @GetMapping("/user/{userID}")
@@ -79,10 +81,10 @@ public class UserController {
         sharedResource.unlock();
 
         JSONObject response = new JSONObject()
-            .put("username", user.getUsername())
-            .put("user_id", user.getId())
-            .put("email", user.getEmail())
-            .put("verified", user.getVerified());
+                .put("username", user.getUsername())
+                .put("user_id", user.getId())
+                .put("email", user.getEmail())
+                .put("verified", user.getVerified());
 
         return response.toString();
     }
@@ -95,7 +97,7 @@ public class UserController {
         }
         String username = json.getString("username");
 
-        if(!userExists(username)){
+        if (!userExists(username)) {
             sharedResource.unlock();
             return createResponse("failed", "no such user exists", new UserBuilder()
                     .setUsername(username)
@@ -114,7 +116,7 @@ public class UserController {
         Hasher hasher = new Hasher(user.getPasswordSalt());
         String hashedPassword = hasher.hash(decryptedPassword);
 
-        if(!hashedPassword.equals(user.getPassword())){
+        if (!hashedPassword.equals(user.getPassword())) {
             return createResponse("failed", "incorrect password", new UserBuilder()
                     .setUsername(username)
                     .build()).toString();
@@ -131,7 +133,7 @@ public class UserController {
             Logger.log("Unable to lock resources for user creation", WARNING);
         }
 
-        if(userExists(username)){
+        if (userExists(username)) {
             sharedResource.unlock();
             return createResponse("failed", "A user with that username already exists", new UserBuilder()
                     .setUsername(username)
@@ -191,25 +193,27 @@ public class UserController {
         return json.toString();
     }
 
-    private JSONObject createResponse(String status, String message, User user){
+    private JSONObject createResponse(String status, String message, User user) {
         JSONObject json = new JSONObject()
-            .put("status", status)
-            .put("message", message);
+                .put("status", status)
+                .put("message", message);
         JSONObject userJson = new JSONObject();
-        if(status.equals("failed")){
+        assert (status.equals("failed") || status.equals("success")) : "Status should only either be failed or success";
+
+        if (status.equals("failed")) {
             userJson.put("username", user.getUsername());
-        } else {
+        } else if (status.equals("success")) {
             userJson.put("user_id", user.getId())
-                .put("username", user.getUsername())
-                .put("email", user.getEmail())
-                .put("verified", user.getVerified());
+                    .put("username", user.getUsername())
+                    .put("email", user.getEmail())
+                    .put("verified", user.getVerified());
         }
         json.put("user_data", userJson);
         return json;
     }
 
-    private boolean userExists(String username){
-        if(findUserByUsername(username) != null){
+    private boolean userExists(String username) {
+        if (findUserByUsername(username) != null) {
             return true;
         }
         return false;
@@ -220,7 +224,7 @@ public class UserController {
         User user = null;
         try {
             String command = "select * from users where username='" + username + "'";
-            if(dbController.getCommandRowCount(command) < 1){
+            if (dbController.getCommandRowCount(command) < 1) {
                 return null;
             }
             ResultSet rs = dbController.execQuery(command);
@@ -234,14 +238,15 @@ public class UserController {
     private User getUserFromDB(int userID) {
         User user = null;
         try {
-            ResultSet rs = sharedResource.getDatabaseController().execQuery("select * from users where user_id=" + userID);
+            ResultSet rs = sharedResource.getDatabaseController()
+                    .execQuery("select * from users where user_id=" + userID);
             rs.next();
             user = new UserBuilder()
-                .setId(rs.getInt("user_id"))
-                .setUsername(rs.getString("username"))
-                .setEmail(rs.getString("email"))
-                .setVerified(rs.getBoolean("verified"))
-                .build();
+                    .setId(rs.getInt("user_id"))
+                    .setUsername(rs.getString("username"))
+                    .setEmail(rs.getString("email"))
+                    .setVerified(rs.getBoolean("verified"))
+                    .build();
         } catch (SQLException e) {
             Logger.log("Unable to get a user from the db", WARNING);
             e.printStackTrace();
@@ -252,13 +257,13 @@ public class UserController {
     private User getUserFromResultSet(ResultSet rs) throws SQLException {
         rs.next();
         return new UserBuilder()
-            .setId(rs.getInt("user_id"))
-            .setUsername(rs.getString("username"))
-            .setEmail(rs.getString("email"))
-            .setPassword(rs.getString("password"))
-            .setPasswordSalt(rs.getString("password_salt"))
-            .setVerified(rs.getBoolean("verified"))
-            .build();
+                .setId(rs.getInt("user_id"))
+                .setUsername(rs.getString("username"))
+                .setEmail(rs.getString("email"))
+                .setPassword(rs.getString("password"))
+                .setPasswordSalt(rs.getString("password_salt"))
+                .setVerified(rs.getBoolean("verified"))
+                .build();
     }
 
 }
