@@ -4,10 +4,11 @@ use trademart;
 
 create table if not exists users (
     user_id int primary key,
-    name varchar(256),
-    email varchar(256),
-    password varchar(256),
-    password_salt varchar(256),
+    username varchar(35) unique,
+    name varchar(100),
+    email varchar(254),
+    password varchar(128),
+    password_salt varchar(24),
     prefered_posts varchar(128),
     verified bit
 );
