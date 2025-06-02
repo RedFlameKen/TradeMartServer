@@ -4,18 +4,28 @@ public class User {
 
     private int id;
     private String name;
+    private String username;
     private String email;
     private String password;
+    private String passwordSalt;
+    private boolean verified;
 
     public User(UserBuilder builder){
         this.id = builder.id;
+        this.username = builder.username;
         this.name = builder.name;
         this.email = builder.email;
         this.password = builder.password;
+        this.passwordSalt = builder.passwordSalt;
+        this.verified = builder.verified;
     }
 
     public int getId() {
         return id;
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     public String getName() {
@@ -30,20 +40,43 @@ public class User {
         return password;
     }
 
+    public String getPasswordSalt() {
+        return passwordSalt;
+    }
+
+    public boolean getVerified() {
+        return verified;
+    }
+
+    public int getVerifiedBit() {
+        if(verified)
+            return 1;
+        return 0;
+    }
+
     public static class UserBuilder {
 
         private int id;
         private String name;
+        private String username;
         private String email;
         private String password;
+        private String passwordSalt;
+        private boolean verified;
 
         public UserBuilder(){
             id = 0;
-            name = email = password = null;
+            username = name = email = password = passwordSalt = null;
+            verified = false;
         }
 
         public UserBuilder setId(int id){
             this.id = id;
+            return this;
+        }
+
+        public UserBuilder setUsername(String username){
+            this.username = username;
             return this;
         }
 
@@ -59,6 +92,20 @@ public class User {
 
         public UserBuilder setPassword(String password) {
             this.password = password;
+            return this;
+        }
+
+        public UserBuilder setPasswordSalt(String passwordSalt) {
+            this.passwordSalt = passwordSalt;
+            return this;
+        }
+
+        public UserBuilder setVerified(boolean verified) {
+            this.verified = verified;
+            return this;
+        }
+        public UserBuilder setVerified(int verified) {
+            this.verified = verified >= 1 ? true : false;
             return this;
         }
 
