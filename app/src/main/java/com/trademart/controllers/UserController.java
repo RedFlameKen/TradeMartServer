@@ -25,6 +25,7 @@ import com.trademart.encryption.Hasher;
 import com.trademart.user.User;
 import com.trademart.user.User.UserBuilder;
 import com.trademart.util.Logger;
+import com.trademart.util.Logger.LogLevel;
 
 @RestController
 public class UserController {
@@ -41,7 +42,9 @@ public class UserController {
         try {
             json = new JSONObject(new JSONTokener(userData));
         } catch (JSONException e) {
-            return ResponseEntity.badRequest().body("");
+            Logger.log("received a bad request upon login", LogLevel.WARNING);
+            return ResponseEntity.badRequest().body(
+                    createResponse("failed", "no such user exists", null).toString());
         }
         String responseBody = userLoginProcess(json);
         return ResponseEntity.ok().body(responseBody);
@@ -68,7 +71,7 @@ public class UserController {
         return ResponseEntity.ok().body(response.toString());
     }
 
-    @GetMapping("/user/{userID}")
+    @GetMapping("/user/profile/{userID}")
     public String fetchUserData(@PathVariable("userID") int userID) {
         try {
             sharedResource.lock();
@@ -147,7 +150,7 @@ public class UserController {
         String saltIV = json.getString("salt_iv");
         UserBuilder builder = new UserBuilder()
                 .setId(id)
-                .setUsername(json.getString("username"))
+                .setUsername(username)
                 .setEmail(json.getString("email"))
                 .setPassword(json.getString("password"));
         User user = builder.build();
@@ -200,13 +203,15 @@ public class UserController {
         JSONObject userJson = new JSONObject();
         assert (status.equals("failed") || status.equals("success")) : "Status should only either be failed or success";
 
-        if (status.equals("failed")) {
-            userJson.put("username", user.getUsername());
-        } else if (status.equals("success")) {
-            userJson.put("user_id", user.getId())
+        if(user != null) {
+            if (status.equals("failed")) {
+                userJson.put("username", user.getUsername());
+            } else if (status.equals("success")) {
+                userJson.put("user_id", user.getId())
                     .put("username", user.getUsername())
                     .put("email", user.getEmail())
                     .put("verified", user.getVerified());
+            }
         }
         json.put("user_data", userJson);
         return json;
