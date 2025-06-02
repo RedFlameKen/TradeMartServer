@@ -18,7 +18,7 @@ create table if not exists skill_cards (
     skill_title varchar(256),
     skill_description varchar(1024),
     tags varchar(1024),
-    video_url varchar(2000),
+    video_url varchar(2048),
     user_id int,
     foreign key(user_id) references users(user_id)
 );
@@ -49,7 +49,7 @@ create table if not exists job_postings (
     job_category varchar(255),
     job_description varchar(1024),
     date_posted datetime,
-    image_attachment_url varchar(2000),
+    image_attachment_url varchar(2048),
     user_id int,
     foreign key(user_id) references users(user_id)
 );
@@ -57,7 +57,7 @@ create table if not exists job_postings (
 create table if not exists media (
     media_id int primary key,
     short_video_id int,
-    media_url varchar(2000),
+    media_url varchar(2048),
     date_uploaded datetime,
     user_id int,
     foreign key(user_id) references users(user_id)
