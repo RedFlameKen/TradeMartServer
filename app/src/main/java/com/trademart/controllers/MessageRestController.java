@@ -23,12 +23,12 @@ import com.trademart.util.Logger.LogLevel;
 
 @RestController
 @RequestMapping("/message")
-public class MessageController {
+public class MessageRestController {
 
     private ArrayList<Message> messages = new ArrayList<>();
     private SharedResource sharedResource;
 
-    public MessageController(SharedResource sharedResource){
+    public MessageRestController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
     }
 

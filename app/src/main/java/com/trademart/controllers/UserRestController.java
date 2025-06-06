@@ -28,11 +28,11 @@ import com.trademart.util.Logger;
 import com.trademart.util.Logger.LogLevel;
 
 @RestController
-public class UserController {
+public class UserRestController {
 
     private SharedResource sharedResource;
 
-    public UserController(SharedResource sharedResource) {
+    public UserRestController(SharedResource sharedResource) {
         this.sharedResource = sharedResource;
     }
 
