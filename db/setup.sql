@@ -13,6 +13,16 @@ create table if not exists users (
     verified bit
 );
 
+create table if not exists posts (
+    post_id int primary key,
+    title varchar(128),
+    description varchar(2048),
+    attached_media varchar(4098),
+    likes int,
+    user_id int,
+    foreign key(user_id) references users(user_id)
+);
+
 create table if not exists skill_cards (
     skill_card_id int primary key,
     skill_title varchar(256),
