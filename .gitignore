@@ -12,6 +12,7 @@ app/.settings/
 app/.classpath
 app/.project
 app/.dbconfig.json
+app/.media_conf.json
 
 docs/
 
