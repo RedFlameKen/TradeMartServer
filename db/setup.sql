@@ -73,6 +73,13 @@ create table if not exists media (
     foreign key(user_id) references users(user_id)
 );
 
+create table if not exists post_media (
+    media_id int,
+    post_id int,
+    foreign key(media_id) references media(media_id),
+    foreign key(post_id) references posts(post_id)
+);
+
 create table if not exists report_contents (
     report_id int primary key,
     report_type varchar(255)
