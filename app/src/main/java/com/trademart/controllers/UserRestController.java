@@ -3,9 +3,6 @@ package com.trademart.controllers;
 import static com.trademart.util.Logger.LogLevel.WARNING;
 
 import java.net.URI;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,22 +15,27 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
-import com.trademart.db.DatabaseController;
 import com.trademart.db.IDGenerator;
 import com.trademart.encryption.Decryptor;
 import com.trademart.encryption.Hasher;
+import com.trademart.post.PostController;
 import com.trademart.user.User;
 import com.trademart.user.User.UserBuilder;
+import com.trademart.user.UserController;
 import com.trademart.util.Logger;
 import com.trademart.util.Logger.LogLevel;
 
 @RestController
-public class UserRestController {
+public class UserRestController extends RestControllerBase {
 
     private SharedResource sharedResource;
+    private UserController userController;
+    private PostController postController;
 
     public UserRestController(SharedResource sharedResource) {
         this.sharedResource = sharedResource;
+        this.userController = new UserController(sharedResource);
+        this.postController = new PostController(sharedResource);
     }
 
     @PostMapping("/user/login")
@@ -43,8 +45,10 @@ public class UserRestController {
             json = new JSONObject(new JSONTokener(userData));
         } catch (JSONException e) {
             Logger.log("received a bad request upon login", LogLevel.WARNING);
-            return ResponseEntity.badRequest().body(
-                    createResponse("failed", "no such user exists", null).toString());
+            return ResponseEntity
+                .badRequest()
+                .body(createUserResponse("failed", "no such user exists", null)
+                        .toString());
         }
         String responseBody = userLoginProcess(json);
         return ResponseEntity.ok().body(responseBody);
@@ -72,16 +76,12 @@ public class UserRestController {
     }
 
     @GetMapping("/user/profile/{userID}")
-    public String fetchUserData(@PathVariable("userID") int userID) {
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            Logger.log("Unable to lock resources for user fetch", WARNING);
+    public ResponseEntity<String> fetchUserData(@PathVariable("userID") int userID) {
+        User user = userController.getUserFromDB(userID);
+
+        if (user == null) {
+            return ResponseEntity.notFound().build();
         }
-
-        User user = getUserFromDB(userID);
-
-        sharedResource.unlock();
 
         JSONObject response = new JSONObject()
                 .put("username", user.getUsername())
@@ -89,7 +89,7 @@ public class UserRestController {
                 .put("email", user.getEmail())
                 .put("verified", user.getVerified());
 
-        return response.toString();
+        return ResponseEntity.ok(response.toString());
     }
 
     private String userLoginProcess(JSONObject json) {
@@ -100,9 +100,9 @@ public class UserRestController {
         }
         String username = json.getString("username");
 
-        if (!userExists(username)) {
+        if (!userController.userExists(username)) {
             sharedResource.unlock();
-            return createResponse("failed", "no such user exists", new UserBuilder()
+            return createUserResponse("failed", "no such user exists", new UserBuilder()
                     .setUsername(username)
                     .build()).toString();
         }
@@ -112,7 +112,7 @@ public class UserRestController {
         Decryptor decryptor = new Decryptor(saltIv);
         String decryptedPassword = decryptor.decrypt(password);
 
-        User user = findUserByUsername(username);
+        User user = userController.findUserByUsername(username);
 
         sharedResource.unlock();
 
@@ -120,12 +120,12 @@ public class UserRestController {
         String hashedPassword = hasher.hash(decryptedPassword);
 
         if (!hashedPassword.equals(user.getPassword())) {
-            return createResponse("failed", "incorrect password", new UserBuilder()
+            return createUserResponse("failed", "incorrect password", new UserBuilder()
                     .setUsername(username)
                     .build()).toString();
         }
 
-        return createResponse("success", "logged in successfully", user).toString();
+        return createUserResponse("success", "logged in successfully", user).toString();
     }
 
     private JSONObject userCreationProcess(JSONObject json) throws JSONException {
@@ -136,9 +136,9 @@ public class UserRestController {
             Logger.log("Unable to lock resources for user creation", WARNING);
         }
 
-        if (userExists(username)) {
+        if (userController.userExists(username)) {
             sharedResource.unlock();
-            return createResponse("failed", "A user with that username already exists", new UserBuilder()
+            return createUserResponse("failed", "A user with that username already exists", new UserBuilder()
                     .setUsername(username)
                     .build());
         }
@@ -161,30 +161,10 @@ public class UserRestController {
             Logger.log("Unable to lock resources for user creation", WARNING);
         }
 
-        insertUserToDB(sharedResource.getDatabaseController(), user, saltIV);
+        userController.insertUserToDB(sharedResource.getDatabaseController(), user, saltIV);
 
         sharedResource.unlock();
-        return createResponse("success", "account created", user);
-    }
-
-    private void insertUserToDB(DatabaseController dbController, User user, String saltIV) {
-        String cmd = "insert into users(user_id, username, email, password, password_salt, verified) values (?, ?, ?, ?, ?, ?)";
-        String decryptedPassword = new Decryptor(saltIV).decrypt(user.getPassword());
-        Hasher hasher = new Hasher();
-        String hashSalt = hasher.getSalt();
-        String hashedPassword = hasher.hash(decryptedPassword);
-        try {
-            PreparedStatement prep = dbController.prepareStatement(cmd);
-            prep.setInt(1, user.getId());
-            prep.setString(2, user.getUsername());
-            prep.setString(3, user.getEmail());
-            prep.setString(4, hashedPassword);
-            prep.setString(5, hashSalt);
-            prep.setBoolean(6, false);
-            prep.execute();
-        } catch (SQLException e) {
-            Logger.log("Unable to insert user to db", WARNING);
-        }
+        return createUserResponse("success", "account created", user);
     }
 
     private String createUserCreationResponse(User user) {
@@ -196,12 +176,9 @@ public class UserRestController {
         return json.toString();
     }
 
-    private JSONObject createResponse(String status, String message, User user) {
-        JSONObject json = new JSONObject()
-                .put("status", status)
-                .put("message", message);
+    private JSONObject createUserResponse(String status, String message, User user) {
+        JSONObject json = createResponse(status, message);
         JSONObject userJson = new JSONObject();
-        assert (status.equals("failed") || status.equals("success")) : "Status should only either be failed or success";
 
         if(user != null) {
             if (status.equals("failed")) {
@@ -216,59 +193,4 @@ public class UserRestController {
         json.put("user_data", userJson);
         return json;
     }
-
-    private boolean userExists(String username) {
-        if (findUserByUsername(username) != null) {
-            return true;
-        }
-        return false;
-    }
-
-    private User findUserByUsername(String username) {
-        DatabaseController dbController = sharedResource.getDatabaseController();
-        User user = null;
-        try {
-            String command = "select * from users where username='" + username + "'";
-            if (dbController.getCommandRowCount(command) < 1) {
-                return null;
-            }
-            ResultSet rs = dbController.execQuery(command);
-            user = getUserFromResultSet(rs);
-        } catch (SQLException e) {
-            Logger.log("Unable to get a user from the db", WARNING);
-        }
-        return user;
-    }
-
-    private User getUserFromDB(int userID) {
-        User user = null;
-        try {
-            ResultSet rs = sharedResource.getDatabaseController()
-                    .execQuery("select * from users where user_id=" + userID);
-            rs.next();
-            user = new UserBuilder()
-                    .setId(rs.getInt("user_id"))
-                    .setUsername(rs.getString("username"))
-                    .setEmail(rs.getString("email"))
-                    .setVerified(rs.getBoolean("verified"))
-                    .build();
-        } catch (SQLException e) {
-            Logger.log("Unable to get a user from the db", WARNING);
-            e.printStackTrace();
-        }
-        return user;
-    }
-
-    private User getUserFromResultSet(ResultSet rs) throws SQLException {
-        rs.next();
-        return new UserBuilder()
-                .setId(rs.getInt("user_id"))
-                .setUsername(rs.getString("username"))
-                .setEmail(rs.getString("email"))
-                .setPassword(rs.getString("password"))
-                .setPasswordSalt(rs.getString("password_salt"))
-                .setVerified(rs.getBoolean("verified"))
-                .build();
-    }
-
 }

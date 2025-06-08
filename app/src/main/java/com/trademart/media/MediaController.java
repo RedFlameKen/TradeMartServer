@@ -65,7 +65,7 @@ public class MediaController {
     
     // TODO: Structure media directory and Write methods for retreiving media
 
-    public void writeFile(String filename, byte[] data){
+    public void writeFile(String filename, byte[] data) throws IOException {
         String hashedFilename = getHashedFilename(filename);
         String path = new StringBuilder()
             .append(mediaStoragePath)
@@ -79,6 +79,7 @@ public class MediaController {
                 file.createNewFile();
             } catch (IOException e) {
                 Logger.log("Unable to create the file " + path, LogLevel.WARNING);
+                throw e;
             }
         }
         try (FileOutputStream writer = new FileOutputStream(file)) {
@@ -87,6 +88,7 @@ public class MediaController {
             e.printStackTrace();
             Logger.log("Unable to write data to the file " + path, LogLevel.WARNING);
             file.delete();
+            throw e;
         }
     }
 

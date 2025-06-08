@@ -1,5 +1,7 @@
 package com.trademart.controllers;
 
+import java.io.IOException;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -15,7 +17,7 @@ import com.trademart.util.Logger;
 import com.trademart.util.Logger.LogLevel;
 
 @RestController
-public class MediaRestController {
+public class MediaRestController extends RestControllerBase {
 
     @Autowired
     private MediaController controller;
@@ -32,17 +34,13 @@ public class MediaRestController {
         String filename = json.getString("filename");
         String encodedBytes = json.getString("data");
         byte[] data = Encoder.decodeBase64(encodedBytes);
-        controller.writeFile(filename, data);
+        try {
+            controller.writeFile(filename, data);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
         return ResponseEntity.ok(createResponse("successful", "file was successfully stored").toString());
-    }
-    
-    private JSONObject createResponse(String status, String message) {
-        JSONObject json = new JSONObject()
-                .put("status", status)
-                .put("message", message);
-        assert (status.equals("failed") || status.equals("success")) : "Status should only either be failed or success";
-
-        return json;
     }
 
 }
