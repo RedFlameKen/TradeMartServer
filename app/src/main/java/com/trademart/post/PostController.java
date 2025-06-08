@@ -3,6 +3,7 @@ package com.trademart.post;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
@@ -38,6 +39,28 @@ public class PostController {
         sharedResource.unlock();
     }
     
+    public ArrayList<Integer> getPostMediaIDs(int postId) throws SQLException{
+        ArrayList<Integer> ids = new ArrayList<>();
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        DatabaseController db = sharedResource.getDatabaseController();
+        String command = "select post_media.media_id from post_media join media on media.media_id = post_media.media_id order by date_uploaded";
+        PreparedStatement prep = db.prepareStatement(command);
+        prep.setInt(1, postId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            ids.add(rs.getInt("media_id"));
+        }
+        rs.close();
+        prep.close();
+        sharedResource.unlock();
+        return ids;
+    }
+
     public int generatePostID(){
         try {
             sharedResource.lock();
@@ -76,6 +99,27 @@ public class PostController {
 
         sharedResource.unlock();
         return post;
+    }
+
+    public int getUserPostCount(int userId){
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        int count = 0;
+        try {
+            String command = "select COUNT(*) from posts where user_id=?";
+            PreparedStatement prep = sharedResource.getDatabaseController().prepareStatement(command);
+            prep.setInt(1, userId);
+            ResultSet rs = prep.executeQuery();
+            rs.next();
+            count = rs.getInt(1);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        sharedResource.unlock();
+        return count;
     }
 
 }

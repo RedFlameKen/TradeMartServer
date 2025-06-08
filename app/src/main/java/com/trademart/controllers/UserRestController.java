@@ -87,8 +87,8 @@ public class UserRestController extends RestControllerBase {
                 .put("username", user.getUsername())
                 .put("user_id", user.getId())
                 .put("email", user.getEmail())
-                .put("verified", user.getVerified());
-
+                .put("verified", user.getVerified())
+                .put("post_count", postController.getUserPostCount(userID));
         return ResponseEntity.ok(response.toString());
     }
 

@@ -1,12 +1,13 @@
 package com.trademart.controllers;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,13 +33,13 @@ public class PostRestController extends RestControllerBase {
     private UserController userController;
     private PostController postController;
 
-    @Autowired
     private MediaController mediaController;
 
     public PostRestController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
         this.userController = new UserController(sharedResource);
         this.postController = new PostController(sharedResource);
+        this.mediaController = new MediaController(sharedResource);
     }
 
     @PostMapping("/post/publish")
@@ -76,8 +77,21 @@ public class PostRestController extends RestControllerBase {
         return ResponseEntity.ok(json.toString());
     }
 
+    @GetMapping("/post/{post_id}/media")
+    public ResponseEntity<String> fetchPostMediaIDsMapping(@PathVariable("post_id") int postId){
+        JSONObject json = new JSONObject();
+        try {
+            ArrayList<Integer> ids = postController.getPostMediaIDs(postId);
+            json.put("media_ids", ids);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+        return ResponseEntity.ok(json.toString());
+    }
+
     @PostMapping("/post/publish/{post_id}/media")
-    public ResponseEntity<String> uploadPostMedia(@PathVariable("post_id") int postId, @RequestBody String media_data){
+    public ResponseEntity<String> uploadPostMediaMapping(@PathVariable("post_id") int postId, @RequestBody String media_data){
         Post post = postController.findPostByID(postId);
         if (post == null) {
             return ResponseEntity.notFound().build();
@@ -92,8 +106,12 @@ public class PostRestController extends RestControllerBase {
         String encodedData = json.getString("data");
         byte[] data = Encoder.decodeBase64(encodedData);
         try {
-            mediaController.writeFile(filename, data);
+            File file = mediaController.writeFile(filename, data);
+            mediaController.insertPostMediaToDB(file.getAbsolutePath(), post.getUserId(), postId);
         } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        } catch (SQLException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
