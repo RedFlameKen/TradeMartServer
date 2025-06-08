@@ -78,3 +78,10 @@ create table if not exists report_contents (
     report_type varchar(255)
 );
 
+create table if not exists followers (
+    followed_user_id int,
+    follower_user_id int,
+    foreign key(followed_user_id) references users(user_id),
+    foreign key(follower_user_id) references users(user_id)
+);
+
