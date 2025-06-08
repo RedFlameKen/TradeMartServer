@@ -7,6 +7,10 @@ public class IDGenerator {
 
     public static final int ID_RANGE = 100000;
 
+    // TODO: Optimize this, don't gather all ID's, do the following instead:
+    // 1. genrate ID
+    // 2. search db for record with generated id
+    // 3. if found, regenerate
     public static int generateDBID(DatabaseController dbController, String tableName, String idName) {
         int[] ids = null;
         try {
