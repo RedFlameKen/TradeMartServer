@@ -48,7 +48,7 @@ public class PostController {
         }
 
         DatabaseController db = sharedResource.getDatabaseController();
-        String command = "select post_media.media_id from post_media join media on media.media_id = post_media.media_id order by date_uploaded";
+        String command = "select post_media.media_id from post_media join media on media.media_id = post_media.media_id where post_media.post_id=? order by date_uploaded";
         PreparedStatement prep = db.prepareStatement(command);
         prep.setInt(1, postId);
         ResultSet rs = prep.executeQuery();
@@ -120,6 +120,27 @@ public class PostController {
         }
         sharedResource.unlock();
         return count;
+    }
+
+    public ArrayList<Integer> getPostIDsByUserID(int userId){
+        ArrayList<Integer> postIds = new ArrayList<>();
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        try {
+            String command = "select post_id from posts where user_id=?";
+            PreparedStatement prep = sharedResource.getDatabaseController().prepareStatement(command);
+            prep.setInt(1, userId);
+            ResultSet rs = prep.executeQuery();
+            while(rs.next()){
+                postIds.add(rs.getInt("post_id"));
+            }
+        } catch (SQLException e) {
+        }
+        sharedResource.unlock();
+        return postIds;
     }
 
 }

@@ -3,7 +3,9 @@ package com.trademart.controllers;
 import static com.trademart.util.Logger.LogLevel.WARNING;
 
 import java.net.URI;
+import java.util.ArrayList;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -75,8 +77,8 @@ public class UserRestController extends RestControllerBase {
         return ResponseEntity.ok().body(response.toString());
     }
 
-    @GetMapping("/user/profile/{userID}")
-    public ResponseEntity<String> fetchUserData(@PathVariable("userID") int userID) {
+    @GetMapping("/user/profile/{user_id}")
+    public ResponseEntity<String> fetchUserData(@PathVariable("user_id") int userID) {
         User user = userController.getUserFromDB(userID);
 
         if (user == null) {
