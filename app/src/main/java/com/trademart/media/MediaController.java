@@ -31,13 +31,20 @@ public class MediaController {
     public static final String MEDIA_CONTROLLER_CONFIG_FILE = ".media_conf.json";
     public static final String IMAGES_DIR = "/images";
     public static final String VIDEOS_DIR = "/videos";
+    public static final String HLS_PARTS_DIR = "/videos/hls";
     public static final String[] IMAGE_TYPES = {
             "jpg",
             "jpeg",
             "png",
     };
     public static final String[] VIDEO_TYPES = {
-            "mp4"
+            "mp4",
+            "m3u8",
+            "ts"
+    };
+    public static final String[] HLS_TYPES = {
+            "m3u8",
+            "ts"
     };
 
     private String mediaStoragePath;
@@ -64,15 +71,17 @@ public class MediaController {
         return 0;
     }
 
-    // TODO: Structure media directory and Write methods for retreiving media
-
+    // TODO: Figure out how generation of HLS files work
     public File writeFile(String filename, byte[] data) throws IOException {
         String hashedFilename = getHashedFilename(filename);
+
         String path = getMediaPath(hashedFilename);
         File file = new File(path);
         if (!file.exists()) {
             try {
                 file.createNewFile();
+                if(isVideoType(FileUtil.getExtension(filename)))
+                    generateHLSFiles(file, FileUtil.removeExtension(hashedFilename));
             } catch (IOException e) {
                 Logger.log("Unable to create the file " + path, LogLevel.WARNING);
                 throw e;
@@ -87,6 +96,15 @@ public class MediaController {
             throw e;
         }
         return file;
+    }
+
+    private void generateHLSFiles(File file, String basename){
+        String filename = file.getAbsolutePath();
+        String mediaPath = hlsDir();
+        Logger.log("filename: " + filename, LogLevel.INFO);
+        Logger.log("basename: " + basename, LogLevel.INFO);
+        Logger.log("mediaPath: " + mediaPath, LogLevel.INFO);
+        FFmpegUtil.generateHLS(filename, basename, mediaPath);
     }
 
     public byte[] readFileBytes(File file){
@@ -124,10 +142,18 @@ public class MediaController {
         return path.toString();
     }
 
+    public String hlsDir() {
+        StringBuilder path = new StringBuilder()
+                .append(mediaStoragePath)
+                .append(HLS_PARTS_DIR);
+        return path.toString();
+    }
+
     private void initDirectories() {
         initDirectory(mediaStoragePath);
         initDirectory(imagesDir());
         initDirectory(videosDir());
+        initDirectory(hlsDir());
     }
 
     private void initDirectory(String path) {
@@ -162,6 +188,9 @@ public class MediaController {
         if (isVideoType(extension)) {
             return VIDEOS_DIR;
         }
+        if (isHLSType(extension)) {
+            return HLS_PARTS_DIR;
+        }
         return null;
     }
 
@@ -181,7 +210,15 @@ public class MediaController {
         return false;
     }
 
-    public void insertPostMediaToDB(String filepath, int userId, int postId) throws SQLException {
+    public boolean isHLSType(String extension) {
+        for (String ft : HLS_TYPES) {
+            if (extension.equalsIgnoreCase(ft))
+                return true;
+        }
+        return false;
+    }
+
+    public int insertPostMediaToDB(String filepath, int userId, int postId) throws SQLException {
         int mediaId = generateMediaID();
         insertMediaToDB(filepath, mediaId, userId);
         try {
@@ -199,6 +236,7 @@ public class MediaController {
         prep.close();
 
         sharedResource.unlock();
+        return mediaId;
     }
 
     public void insertMediaToDB(String filepath, int mediaId, int userId) throws SQLException {
@@ -209,12 +247,13 @@ public class MediaController {
         }
 
         DatabaseController db = sharedResource.getDatabaseController();
-        String command = "insert into media(media_id, media_url, date_uploaded, user_id) values (?, ?, ?, ?)";
+        String command = "insert into media(media_id, media_type, media_url, date_uploaded, user_id) values (?, ?, ?, ?, ?)";
         PreparedStatement prep = db.prepareStatement(command);
         prep.setInt(1, mediaId);
-        prep.setString(2, filepath);
-        prep.setTimestamp(3, Timestamp.valueOf(TimeUtil.curDateTime()));
-        prep.setInt(4, userId);
+        prep.setString(2, getMediaType(FileUtil.getExtension(filepath)));
+        prep.setString(3, filepath);
+        prep.setTimestamp(4, Timestamp.valueOf(TimeUtil.curDateTime()));
+        prep.setInt(5, userId);
         prep.execute();
         prep.close();
 
@@ -230,5 +269,20 @@ public class MediaController {
         int id = IDGenerator.generateDBID(sharedResource.getDatabaseController(), "media", "media_id");
         sharedResource.unlock();
         return id;
+    }
+
+
+    public static String getMediaType(String extension){
+        for (String string : IMAGE_TYPES) {
+            if(string.equals(extension)){
+                return "image";
+            }
+        }
+        for (String string : VIDEO_TYPES) {
+            if(string.equals(extension)){
+                return "video";
+            }
+        }
+        return "undefined";
     }
 }
