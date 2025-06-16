@@ -66,6 +66,7 @@ create table if not exists job_postings (
 
 create table if not exists media (
     media_id int primary key,
+    media_type varchar(5),
     short_video_id int,
     media_url varchar(2048),
     date_uploaded datetime,
