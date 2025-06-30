@@ -22,13 +22,17 @@ public class UtilTests {
         System.out.println(OSDetect.getOS());
     }
 
-    // @Test
+    @Test
     public void test_FFmpegHLS(){
-        String mediaPath = "/home/redflameken/Storage/temp";
-        String filename = "brehvid";
-        String inputFilePath = "/home/redflameken/Videos/memes/fallguys_battlepass.mp4";
+        String mediaPath = "/home/redflameken/Storage/media/videos/hls";
+        String filename = "karma_vid";
+        String inputFilePath = "/home/redflameken/Videos/Shotcut/TaherKarma.mp4";
+
         FFmpegUtil.generateHLS(inputFilePath, filename, mediaPath);
+
         File file = new File("/home/redflameken/Storage/temp/");
+
         assertTrue(file.exists());
     }
+
 }
