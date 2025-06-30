@@ -13,6 +13,7 @@ import java.sql.Timestamp;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import com.trademart.async.SharedResource;
@@ -116,6 +117,37 @@ public class MediaController {
             e.printStackTrace();
         }
         return bytes;
+    }
+
+    public File getImageFile(String filename){
+        String path = new StringBuilder()
+            .append(imagesDir())
+            .append('/')
+            .append(filename)
+            .toString();
+        return new File(path);
+    }
+
+    public File getVideoHLSFile(String filename){
+        String path = new StringBuilder()
+            .append(hlsDir())
+            .append('/')
+            .append(filename)
+            .toString();
+        return new File(path);
+    }
+
+    public File getVideoFile(String filename){
+        String path = new StringBuilder()
+            .append(videosDir())
+            .append('/')
+            .append(filename)
+            .toString();
+        return new File(path);
+    }
+
+    public File getFile(String filename){
+        return new File(getMediaPath(filename));
     }
 
     public String getMediaPath(String filename){
@@ -285,4 +317,17 @@ public class MediaController {
         }
         return "undefined";
     }
+
+    public MediaType getMediaTypeEnum(String filename){
+        switch (FileUtil.getExtension(filename)) {
+            case "png":
+                return MediaType.IMAGE_PNG;
+            case "jpg":
+            case "jepg":
+                return MediaType.IMAGE_JPEG;
+            default:
+                return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
+
 }

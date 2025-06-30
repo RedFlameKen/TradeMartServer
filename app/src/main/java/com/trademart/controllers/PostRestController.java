@@ -99,7 +99,7 @@ public class PostRestController extends RestControllerBase {
         //     e.printStackTrace();
         // }
         byte[] bytes = null;
-        File file = new File("/home/redflameken/Storage/media/videos/dash.mpd");
+        File file = new File("/home/redflameken/Storage/media/videos/hls/Qjhha2VFZWdXa3UrcHBZMFkzdjBYQT09.m3u8");
         try (FileInputStream reader = new FileInputStream(file)) {
             bytes = reader.readAllBytes();
         } catch (IOException e) {
