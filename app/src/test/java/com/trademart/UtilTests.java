@@ -22,7 +22,7 @@ public class UtilTests {
         System.out.println(OSDetect.getOS());
     }
 
-    @Test
+    // @Test
     public void test_FFmpegHLS(){
         String mediaPath = "/home/redflameken/Storage/media/videos/hls";
         String filename = "karma_vid";
@@ -33,6 +33,18 @@ public class UtilTests {
         File file = new File("/home/redflameken/Storage/temp/");
 
         assertTrue(file.exists());
+    }
+
+    // @Test
+    public void test_FFmpegThumbnail(){
+        String videoPath = "/home/redflameken/Storage/media/videos/hls/Z1diR3lXQTJmaUlVaUUvRmVGT0ZXZz09.m3u8";
+
+        byte[] data = FFmpegUtil.generateThumbnail(videoPath);
+        System.out.printf("size of data: %d", data.length);
+        for (byte b : data) {
+            System.out.print(b + "");
+            
+        }
     }
 
 }

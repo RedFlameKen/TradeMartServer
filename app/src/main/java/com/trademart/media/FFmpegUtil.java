@@ -2,6 +2,8 @@ package com.trademart.media;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.ProcessBuilder.Redirect;
 
 public class FFmpegUtil {
 
@@ -26,6 +28,28 @@ public class FFmpegUtil {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static byte[] generateThumbnail(String videoPath){
+        String[] command = {
+            "ffmpeg", "-i", videoPath,
+            "-vframes", "1",
+            "-f", "image2pipe",
+            "-"
+        };
+        byte[] data = null;
+        try {
+            Process process = new ProcessBuilder()
+                .redirectError(Redirect.DISCARD)
+                .redirectOutput(Redirect.PIPE)
+                .command(command)
+                .start();
+            InputStream is = process.getInputStream();
+            data = is.readAllBytes();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return data;
     }
     
 }
