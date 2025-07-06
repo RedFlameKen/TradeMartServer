@@ -100,6 +100,16 @@ public class MediaController {
         return file;
     }
 
+    private String generateThumbnailPath(String filename){
+        String outputFileName = new StringBuilder()
+            .append(thumbnailsDir())
+            .append("/")
+            .append(filename)
+            .append(".jpg")
+            .toString();
+        return outputFileName;
+    }
+
     private String generateHLSPath(String filename){
         String outputFileName = new StringBuilder()
             .append(hlsDir())
@@ -112,15 +122,16 @@ public class MediaController {
 
     private void generateHLSFiles(File file, String basename){
         String inputFilePath = file.getAbsolutePath();
-        String outputFilePath = generateHLSPath(basename);
+        String hlsOutput = generateHLSPath(basename);
+        String thumbnailOutput = generateThumbnailPath(basename);
         String message = new StringBuilder()
             .append("basename: ").append(basename)
             .append("inputFilePath: ").append(inputFilePath)
-            .append("outputFilePath: ").append(outputFilePath)
+            .append("hlsOutput: ").append(hlsOutput)
             .toString();
         Logger.log(message, LogLevel.INFO);
-        FFmpegUtil.generateHLS(inputFilePath, outputFilePath);
-        FFmpegUtil.generateThumbnail(inputFilePath, outputFilePath);
+        FFmpegUtil.generateHLS(inputFilePath, hlsOutput);
+        FFmpegUtil.generateThumbnail(inputFilePath, thumbnailOutput);
     }
 
     public byte[] readFileBytes(File file){
@@ -132,6 +143,20 @@ public class MediaController {
             e.printStackTrace();
         }
         return bytes;
+    }
+
+    public File getThumbnailFile(String filename){
+        filename = FileUtil.removeExtension(filename).concat(".jpg");
+        String path = new StringBuilder()
+            .append(thumbnailsDir())
+            .append('/')
+            .append(filename)
+            .toString();
+        File file = new File(path);
+        if(!file.exists()){
+            return null;
+        }
+        return file;
     }
 
     public File getImageFile(String filename){
@@ -301,11 +326,16 @@ public class MediaController {
             e.printStackTrace();
         }
 
+        String ext = FileUtil.getExtension(filepath);
+
         DatabaseController db = sharedResource.getDatabaseController();
         String command = "insert into media(media_id, media_type, media_url, date_uploaded, user_id) values (?, ?, ?, ?, ?)";
         PreparedStatement prep = db.prepareStatement(command);
         prep.setInt(1, mediaId);
-        prep.setString(2, getMediaType(FileUtil.getExtension(filepath)));
+        prep.setString(2, getMediaType(ext));
+        if(ext.equals("m3u8")){
+            filepath = filepath.replaceFirst(videosDir(), hlsDir());
+        }
         prep.setString(3, filepath);
         prep.setTimestamp(4, Timestamp.valueOf(TimeUtil.curDateTime()));
         prep.setInt(5, userId);
@@ -329,12 +359,17 @@ public class MediaController {
 
     public static String getMediaType(String extension){
         for (String string : IMAGE_TYPES) {
-            if(string.equals(extension)){
+            if(string.equalsIgnoreCase(extension)){
                 return "image";
             }
         }
         for (String string : VIDEO_TYPES) {
-            if(string.equals(extension)){
+            if(string.equalsIgnoreCase(extension)){
+                return "video";
+            }
+        }
+        for (String string : HLS_TYPES) {
+            if(string.equalsIgnoreCase(extension)){
                 return "video";
             }
         }

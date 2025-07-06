@@ -96,6 +96,33 @@ public class MediaRestController extends RestControllerBase {
         return filepath;
     }
 
+    @GetMapping("/media/thumbnail/{media_id}")
+    private ResponseEntity<byte[]> serveMediaThumbnailByIDMapping(@PathVariable("media_id") Integer mediaId){
+        File file = null;
+        try {
+            file = new File(getMediaPathByID(mediaId));
+        } catch (SQLException e) {
+            return ResponseEntity.notFound().build();
+        } catch (InterruptedException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+        byte[] bytes = null;
+        String ext = FileUtil.getExtension(file.getName());
+        if(ext.equals("m3u8") || ext.equals("mp4")){
+            File thumbnailFile = mediaController.getThumbnailFile(file.getName());
+            bytes = mediaController.readFileBytes(thumbnailFile);
+            file = thumbnailFile;
+        } else {
+            bytes = mediaController.readFileBytes(file);
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(mediaController.getMediaTypeEnum(file.getName()));
+        headers.setContentDisposition(ContentDisposition.builder("attachment")
+                .filename(file.getName())
+                .build());
+        return ResponseEntity.ok().headers(headers).body(bytes);
+    }
+
     @GetMapping("/media/{media_id}")
     private ResponseEntity<byte[]> serveMediaByIDMapping(@PathVariable("media_id") Integer mediaId){
         File file = null;

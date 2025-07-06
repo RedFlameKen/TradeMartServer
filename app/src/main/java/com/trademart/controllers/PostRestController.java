@@ -14,11 +14,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,7 +34,7 @@ import com.trademart.post.Post.PostBuilder;
 import com.trademart.post.PostController;
 import com.trademart.user.User;
 import com.trademart.user.UserController;
-import com.trademart.util.Encoder;
+import com.trademart.util.FileUtil;
 import com.trademart.util.Logger;
 import com.trademart.util.Logger.LogLevel;
 
@@ -158,24 +158,21 @@ public class PostRestController extends RestControllerBase {
     }
 
     @PostMapping("/post/publish/{post_id}/media")
-    public ResponseEntity<String> uploadPostMediaMapping(@PathVariable("post_id") int postId, @RequestBody String media_data){
+    public ResponseEntity<String> uploadPostMediaMapping(@PathVariable("post_id") int postId, @RequestHeader("Content-Disposition") String disposition, @RequestBody byte[] content){
         Post post = postController.findPostByID(postId);
         if (post == null) {
             return ResponseEntity.notFound().build();
         }
-        JSONObject json = null;
-        try {
-            json = new JSONObject(new JSONTokener(media_data));
-        } catch (JSONException e) {
-            return ResponseEntity.badRequest().build();
-        }
-        String filename = json.getString("filename");
-        String encodedData = json.getString("data");
+        String filename = ContentDisposition.parse(disposition).getFilename();
         int mediaId = -1;
-        byte[] data = Encoder.decodeBase64(encodedData);
         try {
-            File file = mediaController.writeFile(filename, data);
-            mediaId = mediaController.insertPostMediaToDB(file.getAbsolutePath(), post.getUserId(), postId);
+            File file = mediaController.writeFile(filename, content);
+            String filepath = file.getAbsolutePath();
+            String ext = FileUtil.getExtension(file.getName());
+            if(ext.equals("mp4")){
+                filepath = FileUtil.removeExtension(filepath).concat(".m3u8");
+            }
+            mediaId = mediaController.insertPostMediaToDB(filepath, post.getUserId(), postId);
         } catch (IOException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
