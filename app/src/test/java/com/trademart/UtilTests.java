@@ -1,17 +1,13 @@
 package com.trademart;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
 import org.junit.Test;
 
-import com.trademart.encryption.Decryptor;
-import com.trademart.encryption.Encryptor;
-import com.trademart.encryption.Hasher;
 import com.trademart.media.FFmpegUtil;
+import com.trademart.media.MediaController;
 import com.trademart.util.OSDetect;
 
 public class UtilTests {
@@ -24,11 +20,10 @@ public class UtilTests {
 
     // @Test
     public void test_FFmpegHLS(){
-        String mediaPath = "/home/redflameken/Storage/media/videos/hls";
-        String filename = "karma_vid";
+        String outputPath = "/home/redflameken/Storage/media/videos/TaherKarma.mp4";
         String inputFilePath = "/home/redflameken/Videos/Shotcut/TaherKarma.mp4";
 
-        FFmpegUtil.generateHLS(inputFilePath, filename, mediaPath);
+        FFmpegUtil.generateHLS(inputFilePath, outputPath);
 
         File file = new File("/home/redflameken/Storage/temp/");
 
@@ -36,7 +31,7 @@ public class UtilTests {
     }
 
     // @Test
-    public void test_FFmpegThumbnail(){
+    public void test_FFmpegThumbnailstdout(){
         String videoPath = "/home/redflameken/Storage/media/videos/hls/Z1diR3lXQTJmaUlVaUUvRmVGT0ZXZz09.m3u8";
 
         byte[] data = FFmpegUtil.generateThumbnail(videoPath);
@@ -45,6 +40,18 @@ public class UtilTests {
             System.out.print(b + "");
             
         }
+    }
+
+    // @Test
+    public void test_FFmpegThumbnail(){
+        MediaController mediaController = new MediaController(null);
+        String videoPath = "/home/redflameken/Storage/media/videos/hls/Z1diR3lXQTJmaUlVaUUvRmVGT0ZXZz09.m3u8";
+        String outputPath = "/home/redflameken/Storage/media/images/thumbnails/Z1diR3lXQTJmaUlVaUUvRmVGT0ZXZz09.jpg";
+
+        // mediaController.writeFile(filename, data)
+        FFmpegUtil.generateThumbnail(videoPath, outputPath);
+        File file = new File("/home/redflameken/Storage/media/images/");
+        assertTrue(file.exists());
     }
 
 }

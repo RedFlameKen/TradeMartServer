@@ -32,6 +32,7 @@ public class MediaController {
     public static final String MEDIA_CONTROLLER_CONFIG_FILE = ".media_conf.json";
     public static final String IMAGES_DIR = "/images";
     public static final String VIDEOS_DIR = "/videos";
+    public static final String THUMBNAILS_DIR = "/images/thumbnails";
     public static final String HLS_PARTS_DIR = "/videos/hls";
     public static final String[] IMAGE_TYPES = {
             "jpg",
@@ -99,13 +100,27 @@ public class MediaController {
         return file;
     }
 
+    private String generateHLSPath(String filename){
+        String outputFileName = new StringBuilder()
+            .append(hlsDir())
+            .append("/")
+            .append(filename)
+            .append(".m3u8")
+            .toString();
+        return outputFileName;
+    }
+
     private void generateHLSFiles(File file, String basename){
-        String filename = file.getAbsolutePath();
-        String mediaPath = hlsDir();
-        Logger.log("filename: " + filename, LogLevel.INFO);
-        Logger.log("basename: " + basename, LogLevel.INFO);
-        Logger.log("mediaPath: " + mediaPath, LogLevel.INFO);
-        FFmpegUtil.generateHLS(filename, basename, mediaPath);
+        String inputFilePath = file.getAbsolutePath();
+        String outputFilePath = generateHLSPath(basename);
+        String message = new StringBuilder()
+            .append("basename: ").append(basename)
+            .append("inputFilePath: ").append(inputFilePath)
+            .append("outputFilePath: ").append(outputFilePath)
+            .toString();
+        Logger.log(message, LogLevel.INFO);
+        FFmpegUtil.generateHLS(inputFilePath, outputFilePath);
+        FFmpegUtil.generateThumbnail(inputFilePath, outputFilePath);
     }
 
     public byte[] readFileBytes(File file){
@@ -160,6 +175,13 @@ public class MediaController {
         return path;
     }
 
+    public String thumbnailsDir() {
+        StringBuilder path = new StringBuilder()
+                .append(mediaStoragePath)
+                .append(THUMBNAILS_DIR);
+        return path.toString();
+    }
+
     public String imagesDir() {
         StringBuilder path = new StringBuilder()
                 .append(mediaStoragePath)
@@ -183,6 +205,7 @@ public class MediaController {
 
     private void initDirectories() {
         initDirectory(mediaStoragePath);
+        initDirectory(thumbnailsDir());
         initDirectory(imagesDir());
         initDirectory(videosDir());
         initDirectory(hlsDir());
