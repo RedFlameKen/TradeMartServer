@@ -20,7 +20,7 @@ create table if not exists posts (
     attached_media varchar(4098),
     likes int,
     user_id int,
-    foreign key(user_id) references users(user_id)
+    foreign key(user_id) references users(user_id) on delete cascade
 );
 
 create table if not exists skill_cards (
@@ -77,8 +77,8 @@ create table if not exists media (
 create table if not exists post_media (
     media_id int,
     post_id int,
-    foreign key(media_id) references media(media_id),
-    foreign key(post_id) references posts(post_id)
+    foreign key(media_id) references media(media_id) on delete cascade,
+    foreign key(post_id) references posts(post_id) on delete cascade
 );
 
 create table if not exists report_contents (
@@ -90,6 +90,6 @@ create table if not exists followers (
     followed_user_id int,
     follower_user_id int,
     foreign key(followed_user_id) references users(user_id),
-    foreign key(follower_user_id) references users(user_id)
+    foreign key(follower_user_id) references users(user_id) on delete cascade
 );
 
