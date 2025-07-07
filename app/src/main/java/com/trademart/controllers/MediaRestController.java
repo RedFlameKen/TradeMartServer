@@ -3,6 +3,7 @@ package com.trademart.controllers;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -12,6 +13,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.ResponseEntity.BodyBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -135,11 +137,23 @@ public class MediaRestController extends RestControllerBase {
         }
         byte[] bytes = mediaController.readFileBytes(file);
         HttpHeaders headers = new HttpHeaders();
+        URI location = null;
+        if(mediaController.isHLSType(FileUtil.getExtension(file.getName()))){
+            location = URI.create("/media/video/".concat(file.getName()));
+        } else if(mediaController.isImageType(FileUtil.getExtension(file.getName()))) {
+            location = URI.create("/media/image/".concat(file.getName()));
+        }
+        // URI uri = new URI(new StringBuilder()
+        //         .append("/media/"));
         headers.setContentType(mediaController.getMediaTypeEnum(file.getName()));
         headers.setContentDisposition(ContentDisposition.builder("attachment")
                 .filename(file.getName())
                 .build());
-        return ResponseEntity.ok().headers(headers).body(bytes);
+        BodyBuilder builder = ResponseEntity.ok().headers(headers);
+        if(location != null){
+            builder.location(location);
+        }
+        return builder.body(bytes);
     }
 
     @GetMapping("/media/image/{filename}")
