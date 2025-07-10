@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ProcessBuilder.Redirect;
 
+import com.trademart.util.FileUtil;
+
 public class FFmpegUtil {
 
     public static void generateHLS(String inputFilePath, String outputFilePath){
@@ -14,6 +16,23 @@ public class FFmpegUtil {
             "-hls_list_size", "0",
             "-f", "hls",
             outputFilePath
+        };
+        try {
+            new ProcessBuilder().command(command).start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void encodeFile(String inputPath, String newExt){
+        String outputPath = new StringBuilder()
+            .append(FileUtil.removeExtension(inputPath))
+            .append(".")
+            .append(newExt)
+            .toString();
+        String[] command = {
+            "ffmpeg", "-i", inputPath,
+            outputPath
         };
         try {
             new ProcessBuilder().command(command).start();

@@ -23,7 +23,9 @@ import com.trademart.encryption.Hasher;
 import com.trademart.util.Encoder;
 import com.trademart.util.FileUtil;
 import com.trademart.util.Logger;
+import com.trademart.util.OSDetect;
 import com.trademart.util.Logger.LogLevel;
+import com.trademart.util.OSDetect.OS;
 import com.trademart.util.TimeUtil;
 
 @Service
@@ -34,6 +36,10 @@ public class MediaController {
     public static final String VIDEOS_DIR = "/videos";
     public static final String THUMBNAILS_DIR = "/images/thumbnails";
     public static final String HLS_PARTS_DIR = "/videos/hls";
+    public static final String IMAGES_DIR_WIN = "\\images";
+    public static final String VIDEOS_DIR_WIN = "\\videos";
+    public static final String THUMBNAILS_DIR_WIN = "\\images\\thumbnails";
+    public static final String HLS_PARTS_DIR_WIN = "\\videos\\hls";
     public static final String[] IMAGE_TYPES = {
             "jpg",
             "jpeg",
@@ -100,10 +106,20 @@ public class MediaController {
         return file;
     }
 
+    public File writeFileNoEncode(String filename, byte[] data) throws IOException {
+        File file = new File(filename);
+        try (FileOutputStream writer = new FileOutputStream(file)) {
+            writer.write(data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return file;
+    }
+
     private String generateThumbnailPath(String filename){
         String outputFileName = new StringBuilder()
             .append(thumbnailsDir())
-            .append("/")
+            .append(OSDetect.getOS() == OS.WINDOWS ? '\\' : '/')
             .append(filename)
             .append(".jpg")
             .toString();
@@ -113,7 +129,7 @@ public class MediaController {
     private String generateHLSPath(String filename){
         String outputFileName = new StringBuilder()
             .append(hlsDir())
-            .append("/")
+            .append(OSDetect.getOS() == OS.WINDOWS ? '\\' : '/')
             .append(filename)
             .append(".m3u8")
             .toString();
@@ -149,7 +165,7 @@ public class MediaController {
         filename = FileUtil.removeExtension(filename).concat(".jpg");
         String path = new StringBuilder()
             .append(thumbnailsDir())
-            .append('/')
+            .append(OSDetect.getOS() == OS.WINDOWS ? '\\' : '/')
             .append(filename)
             .toString();
         File file = new File(path);
@@ -162,7 +178,7 @@ public class MediaController {
     public File getImageFile(String filename){
         String path = new StringBuilder()
             .append(imagesDir())
-            .append('/')
+            .append(OSDetect.getOS() == OS.WINDOWS ? '\\' : '/')
             .append(filename)
             .toString();
         return new File(path);
@@ -171,7 +187,7 @@ public class MediaController {
     public File getVideoHLSFile(String filename){
         String path = new StringBuilder()
             .append(hlsDir())
-            .append('/')
+            .append(OSDetect.getOS() == OS.WINDOWS ? '\\' : '/')
             .append(filename)
             .toString();
         return new File(path);
@@ -180,7 +196,7 @@ public class MediaController {
     public File getVideoFile(String filename){
         String path = new StringBuilder()
             .append(videosDir())
-            .append('/')
+            .append(OSDetect.getOS() == OS.WINDOWS ? '\\' : '/')
             .append(filename)
             .toString();
         return new File(path);
@@ -194,7 +210,7 @@ public class MediaController {
         String path = new StringBuilder()
             .append(mediaStoragePath)
             .append(getAppropriateMediaDir(filename))
-            .append('/')
+            .append(OSDetect.getOS() == OS.WINDOWS ? '\\' : '/')
             .append(filename)
             .toString();
         return path;

@@ -10,6 +10,7 @@ create table if not exists users (
     password varchar(128),
     password_salt varchar(24),
     prefered_posts varchar(128),
+    profile_picture_path varchar(2048),
     verified bit
 );
 

@@ -16,9 +16,11 @@ import com.trademart.util.Logger;
 public class UserController {
 
     private SharedResource sharedResource;
+    private DatabaseController dbController;
 
     public UserController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
+        dbController = sharedResource.getDatabaseController();
     }
 
     public boolean userExists(String username) {
@@ -29,7 +31,11 @@ public class UserController {
     }
 
     public User findUserByUsername(String username) {
-        DatabaseController dbController = sharedResource.getDatabaseController();
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         User user = null;
         try {
             String command = "select * from users where username='" + username + "'";
@@ -41,6 +47,7 @@ public class UserController {
         } catch (SQLException e) {
             Logger.log("Unable to get a user from the db", WARNING);
         }
+        sharedResource.unlock();
         return user;
     }
 
@@ -53,7 +60,7 @@ public class UserController {
         }
 
         try {
-            ResultSet rs = sharedResource.getDatabaseController()
+            ResultSet rs = dbController
                     .execQuery("select * from users where user_id=" + userID);
             rs.next();
             user = new UserBuilder()
@@ -61,6 +68,7 @@ public class UserController {
                     .setUsername(rs.getString("username"))
                     .setEmail(rs.getString("email"))
                     .setVerified(rs.getBoolean("verified"))
+                    .setProfilePicturePath(rs.getString("profile_picture_path"))
                     .build();
         } catch (SQLException e) {
             Logger.log("Unable to get a user from the db", WARNING);
@@ -79,10 +87,48 @@ public class UserController {
                 .setPassword(rs.getString("password"))
                 .setPasswordSalt(rs.getString("password_salt"))
                 .setVerified(rs.getBoolean("verified"))
+                .setProfilePicturePath(rs.getString("profile_picture_path"))
                 .build();
     }
 
-    public void insertUserToDB(DatabaseController dbController, User user, String saltIV) {
+    public String createProfilePicturePath(String parent, int userId, String extension){
+        return new StringBuilder()
+            .append(parent)
+            .append("/pfp_")
+            .append(userId)
+            .append(".")
+            .append(extension)
+            .toString();
+    }
+
+    public void updateProfilePicture(int userId, String path){
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        String command = "update users set profile_picture_path=? where user_id=?";
+
+        try {
+            PreparedStatement prep = dbController.prepareStatement(command);
+            prep.setString(1, path);
+            prep.setInt(2, userId);
+            prep.execute();
+            prep.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        sharedResource.unlock();
+    }
+
+    public void insertUserToDB(User user, String saltIV) {
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         String cmd = "insert into users(user_id, username, email, password, password_salt, verified) values (?, ?, ?, ?, ?, ?)";
         String decryptedPassword = new Decryptor(saltIV).decrypt(user.getPassword());
         Hasher hasher = new Hasher();
@@ -97,9 +143,11 @@ public class UserController {
             prep.setString(5, hashSalt);
             prep.setBoolean(6, false);
             prep.execute();
+            prep.close();
         } catch (SQLException e) {
             Logger.log("Unable to insert user to db", WARNING);
         }
+        sharedResource.unlock();
     }
     
 }

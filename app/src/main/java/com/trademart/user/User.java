@@ -9,6 +9,7 @@ public class User {
     private String password;
     private String passwordSalt;
     private boolean verified;
+    private String profilePicturePath;
 
     public User(UserBuilder builder){
         this.id = builder.id;
@@ -18,6 +19,7 @@ public class User {
         this.password = builder.password;
         this.passwordSalt = builder.passwordSalt;
         this.verified = builder.verified;
+        this.profilePicturePath = builder.profilePicturePath;
     }
 
     public int getId() {
@@ -54,6 +56,10 @@ public class User {
         return 0;
     }
 
+    public String getProfilePicturePath() {
+        return profilePicturePath;
+    }
+
     public static class UserBuilder {
 
         private int id;
@@ -63,6 +69,7 @@ public class User {
         private String password;
         private String passwordSalt;
         private boolean verified;
+        private String profilePicturePath;
 
         public UserBuilder(){
             id = 0;
@@ -106,6 +113,11 @@ public class User {
         }
         public UserBuilder setVerified(int verified) {
             this.verified = verified >= 1 ? true : false;
+            return this;
+        }
+
+        public UserBuilder setProfilePicturePath(String profilePicturePath) {
+            this.profilePicturePath = profilePicturePath;
             return this;
         }
 

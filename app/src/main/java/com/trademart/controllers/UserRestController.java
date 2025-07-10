@@ -2,28 +2,34 @@ package com.trademart.controllers;
 
 import static com.trademart.util.Logger.LogLevel.WARNING;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
 import com.trademart.db.IDGenerator;
 import com.trademart.encryption.Decryptor;
 import com.trademart.encryption.Hasher;
+import com.trademart.media.FFmpegUtil;
+import com.trademart.media.MediaController;
 import com.trademart.post.PostController;
 import com.trademart.user.User;
 import com.trademart.user.User.UserBuilder;
 import com.trademart.user.UserController;
+import com.trademart.util.FileUtil;
 import com.trademart.util.Logger;
 import com.trademart.util.Logger.LogLevel;
 
@@ -33,11 +39,13 @@ public class UserRestController extends RestControllerBase {
     private SharedResource sharedResource;
     private UserController userController;
     private PostController postController;
+    private MediaController mediaController;
 
     public UserRestController(SharedResource sharedResource) {
         this.sharedResource = sharedResource;
         this.userController = new UserController(sharedResource);
         this.postController = new PostController(sharedResource);
+        this.mediaController = new MediaController(sharedResource);
     }
 
     @PostMapping("/user/login")
@@ -78,7 +86,7 @@ public class UserRestController extends RestControllerBase {
     }
 
     @GetMapping("/user/profile/{user_id}")
-    public ResponseEntity<String> fetchUserData(@PathVariable("user_id") int userID) {
+    public ResponseEntity<String> fetchUserDataMapping(@PathVariable("user_id") int userID) {
         User user = userController.getUserFromDB(userID);
 
         if (user == null) {
@@ -94,16 +102,53 @@ public class UserRestController extends RestControllerBase {
         return ResponseEntity.ok(response.toString());
     }
 
-    private String userLoginProcess(JSONObject json) {
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            Logger.log("Unable to lock resources for user creation", WARNING);
+    @GetMapping("/user/{user_id}/avatar")
+    public ResponseEntity<byte[]> updateProfilePictureMapping(@PathVariable("user_id") int userId){
+        User user = userController.getUserFromDB(userId);
+        if(user == null){
+            return ResponseEntity.notFound().build();
         }
+        byte[] data = mediaController.readFileBytes(new File(user.getProfilePicturePath()));
+        String filename = userController.createProfilePicturePath(mediaController.imagesDir(), userId, "jpg");
+        File file = new File(filename);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(mediaController.getMediaTypeEnum(file.getName()));
+        headers.setContentDisposition(ContentDisposition.builder("attachment")
+                .filename(file.getName())
+                .build());
+        return ResponseEntity.ok().headers(headers).body(data);
+    }
+
+    @PostMapping("/user/{user_id}/avatar/update")
+    public ResponseEntity<String> updateProfilePictureMapping(@PathVariable("user_id") int userId, @RequestHeader("Content-Disposition") String dispositionStr, @RequestBody byte[] content){
+        User user = userController.getUserFromDB(userId);
+        if(user == null){
+            return ResponseEntity.notFound().build();
+        }
+        ContentDisposition disposition = ContentDisposition.parse(dispositionStr);
+        String outputFilename = userController
+            .createProfilePicturePath(mediaController.imagesDir(), userId, "jpg");
+
+        try {
+            mediaController.writeFileNoEncode(outputFilename, content);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+
+        String filename = disposition.getFilename();
+        String fileExtension = FileUtil.getExtension(filename);
+        if(fileExtension != "jpg"){
+            FFmpegUtil.encodeFile(outputFilename, "jpg");
+        }
+        userController.updateProfilePicture(userId, outputFilename);
+        return ResponseEntity.ok("");
+    }
+
+    private String userLoginProcess(JSONObject json) {
         String username = json.getString("username");
 
         if (!userController.userExists(username)) {
-            sharedResource.unlock();
             return createUserResponse("failed", "no such user exists", new UserBuilder()
                     .setUsername(username)
                     .build()).toString();
@@ -157,15 +202,8 @@ public class UserRestController extends RestControllerBase {
                 .setPassword(json.getString("password"));
         User user = builder.build();
 
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            Logger.log("Unable to lock resources for user creation", WARNING);
-        }
+        userController.insertUserToDB(user, saltIV);
 
-        userController.insertUserToDB(sharedResource.getDatabaseController(), user, saltIV);
-
-        sharedResource.unlock();
         return createUserResponse("success", "account created", user);
     }
 
