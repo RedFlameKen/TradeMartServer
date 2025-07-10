@@ -142,6 +142,7 @@ public class UserRestController extends RestControllerBase {
             FFmpegUtil.encodeFile(outputFilename, "jpg");
         }
         userController.updateProfilePicture(userId, outputFilename);
+        Logger.log("Profile picture of user: " + userId + "has been updated", LogLevel.INFO);
         return ResponseEntity.ok("");
     }
 
