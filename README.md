@@ -21,12 +21,18 @@ The server will look try to connect to a mysql database as soon as it starts so
 make sure that a mysql server is running on your machine before you run the
 server.
 
-The server also looks for a ".dbconfig.json" configuration file for the
-database connection allowing for flexibility with different machines and
-setups. The configuration file is ignored in git for security reasons, so make
-sure to make it yourself. The file should be made under the `app` directory.
-Here is an example ".dbconfig.json" file:
+The server also makes use of [FFmpeg](https://ffmpeg.org/) to encode videos and
+creating thumbnails. You should install FFmpeg on your machine for these
+features to work. While the server will still start without FFmpeg, crashes
+when using media features should be expected.
 
+The server also looks for a `.dbconfig.json` configuration file for the
+database connection and a `.media_conf.json` configuration file for the media
+path configuration. allowing for flexibility with different machines and
+setups. The configuration file is ignored in git for security reasons, so make
+sure to make it yourself. These files should be made under the `app` directory.
+
+Here is an example `.dbconfig.json` file:
 ```json
 {
     "db_name": "trademart",
@@ -34,6 +40,20 @@ Here is an example ".dbconfig.json" file:
     "password": "root",
     "address": "localhost",
     "port": 3306
+}
+```
+
+Here is an example `.media_conf.json` file:
+```json
+{
+    "storage_path": "/home/username/Storage/media"
+}
+```
+
+Here is an example `.media_conf.json` file for **Windows**:
+```json
+{
+    "storage_path": "C:\\Users\\username\\Documents\\media"
 }
 ```
 
@@ -68,6 +88,10 @@ PATH will depend on the mappings found in the code (e.g. @GetMapping(),
 @PostMapping()). 
 
 CONTENT_FILE is supposedly one of the json files in docs/
+
+> [!WARNING]
+> the `docs` directory was added to `.gitignore`. Create the docs directory and
+> please your test jsons in there if needed.
 
 ADDRESS is the address of the server. User of the script must provide one if
 the address of the spring server is not localhost. By default, this is
