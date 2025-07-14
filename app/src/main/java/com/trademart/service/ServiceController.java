@@ -4,6 +4,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 
 import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
@@ -51,6 +52,29 @@ public class ServiceController {
         return service;
     }
 
+    public ArrayList<Service> getAllServices(){
+        ArrayList<Service> services = new ArrayList<>();
+        String command = "select * from services";
+        try {
+            ResultSet rs = dbController.execQuery(command);
+            while(rs.next()){
+                Service service = new Service.ServiceBuilder()
+                    .setServiceId(rs.getInt("service_id"))
+                    .setServiceTitle(rs.getString("service_title"))
+                    .setServiceDescription(rs.getString("service_description"))
+                    .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
+                    .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
+                    .setOwnerId(rs.getInt("owner_id"))
+                    .build();
+                services.add(service);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return services;
+    }
+
     public boolean writeServiceToDB(Service service){
         String command = "insert into services(service_id,service_title,service_category,service_description,service_price,service_currency,date_posted, owner_id) values (?,?,?,?,?,?,?,?)";
         try {
@@ -81,4 +105,25 @@ public class ServiceController {
         return true;
     }
 
+    public ArrayList<Integer> getServiceMediaIDs(int serviceId) throws SQLException{
+        ArrayList<Integer> ids = new ArrayList<>();
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        DatabaseController db = sharedResource.getDatabaseController();
+        String command = "select service_media.media_id from service_media join media on media.media_id = service_media.media_id where service_media.service_id=? order by date_uploaded";
+        PreparedStatement prep = db.prepareStatement(command);
+        prep.setInt(1, serviceId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            ids.add(rs.getInt("media_id"));
+        }
+        rs.close();
+        prep.close();
+        sharedResource.unlock();
+        return ids;
+    }
 }

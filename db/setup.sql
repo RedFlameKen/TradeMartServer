@@ -88,6 +88,13 @@ create table if not exists media (
     foreign key(user_id) references users(user_id)
 );
 
+create table if not exists service_media (
+    media_id int,
+    service_id int,
+    foreign key(media_id) references media(media_id) on delete cascade,
+    foreign key(service_id) references services(service_id) on delete cascade
+);
+
 create table if not exists post_media (
     media_id int,
     post_id int,

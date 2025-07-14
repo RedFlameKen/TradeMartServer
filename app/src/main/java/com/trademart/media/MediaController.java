@@ -335,6 +335,27 @@ public class MediaController {
         return mediaId;
     }
 
+    public int insertServiceMediaToDB(String filepath, int userId, int serviceId) throws SQLException {
+        int mediaId = generateMediaID();
+        insertMediaToDB(filepath, mediaId, userId);
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        DatabaseController db = sharedResource.getDatabaseController();
+        String command = "insert into service_media(media_id, service_id) values (?, ?)";
+        PreparedStatement prep = db.prepareStatement(command);
+        prep.setInt(1, mediaId);
+        prep.setInt(2, serviceId);
+        prep.execute();
+        prep.close();
+
+        sharedResource.unlock();
+        return mediaId;
+    }
+
     public void insertMediaToDB(String filepath, int mediaId, int userId) throws SQLException {
         try {
             sharedResource.lock();
