@@ -19,8 +19,8 @@ public class ServiceController {
         this.dbController = sharedResource.getDatabaseController();
     }
 
-    public Service findServiceByID(int jobId){
-        String command = "select * from job_postings where job_id=" + jobId;
+    public Service findServiceByID(int serviceId){
+        String command = "select * from services where service_id=" + serviceId;
         Service service = null;
         try {
             sharedResource.lock();
@@ -37,13 +37,12 @@ public class ServiceController {
             ResultSet rs = prep.executeQuery();
             rs.next();
             service = new Service.ServiceBuilder()
-                .setJobId(rs.getInt("job_id"))
-                .setJobTitle(rs.getString("job_title"))
-                .setJobDescription(rs.getString("job_description"))
-                .setJobType(JobType.parse(rs.getString("job_type")))
-                .setJobCategory(JobCategory.parse(rs.getString("job_category")))
+                .setServiceId(rs.getInt("service_id"))
+                .setServiceTitle(rs.getString("service_title"))
+                .setServiceDescription(rs.getString("service_description"))
+                .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
-                .setUserId(rs.getInt("user_id"))
+                .setOwnerId(rs.getInt("owner_id"))
                 .build();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -53,7 +52,7 @@ public class ServiceController {
     }
 
     public boolean writeServiceToDB(Service service){
-        String command = "insert into job_postings(job_id,job_title,job_type,job_category,job_description,date_posted, user_id) values (?,?,?,?,?,?,?)";
+        String command = "insert into services(service_id,service_title,service_category,service_description,service_price,service_currency,date_posted, owner_id) values (?,?,?,?,?,?,?,?)";
         try {
             sharedResource.lock();
         } catch (InterruptedException e) {
@@ -61,16 +60,17 @@ public class ServiceController {
             return false;
         }
         try {
-            int jobId = IDGenerator.generateDBID(dbController, "job_postings", "job_id");
+            int serviceId = IDGenerator.generateDBID(dbController, "services", "service_id");
             PreparedStatement prep = dbController.prepareStatement(command);
 
-            prep.setInt(1, jobId);
-            prep.setString(2, service.getJobTitle());
-            prep.setString(3, service.getJobType().toString());
-            prep.setString(4, service.getJobCategory().toString());
-            prep.setString(5, service.getJobDescription());
-            prep.setTimestamp(6, Timestamp.valueOf(service.getDatePosted()));
-            prep.setInt(7, service.getUserId());
+            prep.setInt(1, serviceId);
+            prep.setString(2, service.getServiceTitle());
+            prep.setString(3, service.getServiceCategory().toString());
+            prep.setString(4, service.getServiceDescription());
+            prep.setDouble(5, service.getServicePrice());
+            prep.setString(6, service.getServiceCurrency());
+            prep.setTimestamp(7, Timestamp.valueOf(service.getDatePosted()));
+            prep.setInt(8, service.getOwnerId());
             prep.execute();
 
         } catch (SQLException e) {

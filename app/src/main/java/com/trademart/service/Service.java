@@ -4,90 +4,95 @@ import java.time.LocalDateTime;
 
 public class Service {
 
-    private int jobId;
-    private String jobTitle;
-    private JobType jobType;
-    private JobCategory jobCategory;
-    private String jobDescription;
+    private double serviceId;
+    private String serviceTitle;
+    private ServiceCategory serviceCategory;
+    private String serviceDescription;
     private LocalDateTime datePosted;
-    private int userId;
+    private double servicePrice;
+    private String serviceCurrency;
+    private int ownerId;
 
     public Service(ServiceBuilder builder){
-        jobId = builder.jobId;
-        jobTitle = builder.jobTitle;
-        jobType = builder.jobType;
-        jobCategory = builder.jobCategory;
-        jobDescription = builder.jobDescription;
+        serviceId = builder.serviceId;
+        serviceTitle = builder.serviceTitle;
+        serviceCategory = builder.serviceCategory;
+        serviceDescription = builder.serviceDescription;
+        servicePrice = builder.servicePrice;
+        serviceCurrency = builder.serviceCurrency;
         datePosted = builder.datePosted;
-        userId = builder.userId;
+        ownerId = builder.ownerId;
     }
 
-    public int getJobId() {
-        return jobId;
+    public double getServiceId() {
+        return serviceId;
     }
 
-    public String getJobTitle() {
-        return jobTitle;
+    public String getServiceTitle() {
+        return serviceTitle;
     }
 
-    public JobType getJobType() {
-        return jobType;
+    public ServiceCategory getServiceCategory() {
+        return serviceCategory;
     }
 
-    public JobCategory getJobCategory() {
-        return jobCategory;
+    public String getServiceDescription() {
+        return serviceDescription;
     }
 
-    public String getJobDescription() {
-        return jobDescription;
+    public double getServicePrice() {
+        return servicePrice;
+    }
+
+    public String getServiceCurrency() {
+        return serviceCurrency;
     }
 
     public LocalDateTime getDatePosted() {
         return datePosted;
     }
 
-    public int getUserId() {
-        return userId;
+    public int getOwnerId() {
+        return ownerId;
     }
     
     public static class ServiceBuilder {
 
-        private int jobId;
-        private String jobTitle;
-        private JobType jobType;
-        private JobCategory jobCategory;
-        private String jobDescription;
+        private double serviceId;
+        private String serviceTitle;
+        private ServiceCategory serviceCategory;
+        private String serviceDescription;
         private LocalDateTime datePosted;
-        private int userId;
+        private double servicePrice;
+        private String serviceCurrency;
+        private int ownerId;
 
         public ServiceBuilder(){
-            jobId = userId = -1;
-            jobTitle = jobDescription = "";
+            serviceId = ownerId = -1;
+            serviceTitle = serviceDescription = "";
+            serviceCurrency = "PHP";
+            serviceCategory = ServiceCategory.NONE;
+            servicePrice = 0;
             datePosted = null;
         }
 
-        public ServiceBuilder setJobId(int jobId) {
-            this.jobId = jobId;
+        public ServiceBuilder setServiceId(double serviceId) {
+            this.serviceId = serviceId;
             return this;
         }
 
-        public ServiceBuilder setJobTitle(String jobTitle) {
-            this.jobTitle = jobTitle;
+        public ServiceBuilder setServiceTitle(String serviceTitle) {
+            this.serviceTitle = serviceTitle;
             return this;
         }
 
-        public ServiceBuilder setJobType(JobType jobType) {
-            this.jobType = jobType;
+        public ServiceBuilder setServiceCategory(ServiceCategory serviceCategory) {
+            this.serviceCategory = serviceCategory;
             return this;
         }
 
-        public ServiceBuilder setJobCategory(JobCategory jobCategory) {
-            this.jobCategory = jobCategory;
-            return this;
-        }
-
-        public ServiceBuilder setJobDescription(String jobDescription) {
-            this.jobDescription = jobDescription;
+        public ServiceBuilder setServiceDescription(String serviceDescription) {
+            this.serviceDescription = serviceDescription;
             return this;
         }
 
@@ -96,8 +101,19 @@ public class Service {
             return this;
         }
 
-        public ServiceBuilder setUserId(int userId) {
-            this.userId = userId;
+        public ServiceBuilder setOwnerId(int ownerId) {
+            this.ownerId = ownerId;
+            return this;
+        }
+
+        public ServiceBuilder setServicePrice(double servicePrice) {
+            this.servicePrice = servicePrice;
+            return this;
+        }
+
+        public ServiceBuilder setServiceCurrency(String serviceCurrency) {
+            if(serviceCurrency != null)
+                this.serviceCurrency = serviceCurrency;
             return this;
         }
 

@@ -12,8 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
-import com.trademart.service.JobCategory;
-import com.trademart.service.JobType;
+import com.trademart.service.ServiceCategory;
 import com.trademart.service.Service;
 import com.trademart.service.ServiceController;
 
@@ -28,21 +27,22 @@ public class ServiceRestController extends RestControllerBase {
         this.serviceController = new ServiceController(sharedResource);
     }
 
-    @GetMapping("/service/{job_id}")
-    public ResponseEntity<String> serveServiceDetailsMapping(@PathVariable("job_id") int jobId){
-        Service service = serviceController.findServiceByID(jobId);
+    @GetMapping("/service/{service_id}")
+    public ResponseEntity<String> serveServiceDetailsMapping(@PathVariable("service_id") int serviceId){
+        Service service = serviceController.findServiceByID(serviceId);
         if(service == null){
             return ResponseEntity.notFound().build();
         }
 
         JSONObject json = new JSONObject()
-            .put("job_id", service.getJobId())
-            .put("job_title", service.getJobTitle())
-            .put("job_description", service.getJobDescription())
-            .put("job_type", service.getJobType())
-            .put("job_category", service.getJobCategory())
+            .put("service_id", service.getServiceId())
+            .put("service_title", service.getServiceTitle())
+            .put("service_description", service.getServiceDescription())
+            .put("service_category", service.getServiceCategory())
+            .put("service_price", service.getServicePrice())
+            .put("service_currency", service.getServiceCurrency())
             .put("date_posted", service.getDatePosted())
-            .put("user_id", service.getUserId());
+            .put("owner_id", service.getOwnerId());
 
         return ResponseEntity.ok(json.toString());
     }
@@ -50,19 +50,19 @@ public class ServiceRestController extends RestControllerBase {
     @PostMapping("/service/create")
     public ResponseEntity<String> createServiceDetailsMapping(@RequestBody String content){
         JSONObject json = new JSONObject(new JSONTokener(content));
-        Service service = serviceController.findServiceByID(json.getInt("job_id"));
-        if(service != null){
-            return ResponseEntity.ok(createResponse("failed", "a service with the specified id already exists").toString());
-        }
+        // Service service = serviceController.findServiceByID(json.getInt("service_id"));
+        // if(service != null){
+        //     return ResponseEntity.ok(createResponse("failed", "a service with the specified id already exists").toString());
+        // }
 
-        service = new Service.ServiceBuilder()
-            .setJobId(json.getInt("job_id"))
-            .setJobTitle(json.getString("job_title"))
-            .setJobDescription(json.getString("job_description"))
-            .setJobType(JobType.parse(json.getString("job_type")))
-            .setJobCategory(JobCategory.parse(json.getString("job_category")))
+        Service service = new Service.ServiceBuilder()
+            .setServiceTitle(json.getString("service_title"))
+            .setServiceDescription(json.getString("service_description"))
+            // .setServiceCategory(ServiceCategory.parse(json.getString("service_category")))
+            .setServicePrice(json.getDouble("service_price"))
+            // .setServiceCurrency(json.getString("service_currency"))
             .setDatePosted(LocalDateTime.parse(json.getString("date_posted")))
-            .setUserId(json.getInt("user_id"))
+            .setOwnerId(json.getInt("owner_id"))
             .build();
         
         if(!serviceController.writeServiceToDB(service)){

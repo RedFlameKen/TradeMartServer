@@ -53,16 +53,29 @@ create table if not exists text_messages (
     foreign key(target_user_id) references users(user_id)
 );
 
-create table if not exists job_postings (
+create table if not exists services (
+    service_id int primary key,
+    service_title varchar(255),
+    service_category varchar(255),
+    service_description varchar(1024),
+    service_price double,
+    service_currency varchar(3),
+    date_posted datetime,
+    owner_id int,
+    client_id int,
+    foreign key(owner_id) references users(user_id),
+    foreign key(client_id) references users(user_id)
+);
+
+create table if not exists job_listings (
     job_id int primary key,
     job_title varchar(255),
     job_type varchar(128),
     job_category varchar(255),
     job_description varchar(1024),
     date_posted datetime,
-    image_attachment_url varchar(2048),
-    user_id int,
-    foreign key(user_id) references users(user_id)
+    owner_id int,
+    foreign key(owner_id) references users(user_id)
 );
 
 create table if not exists media (
