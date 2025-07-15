@@ -22,6 +22,8 @@ import com.trademart.async.SharedResource;
 import com.trademart.media.MediaController;
 import com.trademart.service.Service;
 import com.trademart.service.ServiceController;
+import com.trademart.user.User;
+import com.trademart.user.UserController;
 import com.trademart.util.FileUtil;
 
 @RestController
@@ -30,11 +32,13 @@ public class ServiceRestController extends RestControllerBase {
     private SharedResource sharedResource;
     private ServiceController serviceController;
     private MediaController mediaController;
+    private UserController userController;
 
     public ServiceRestController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
         this.serviceController = new ServiceController(sharedResource);
         this.mediaController = new MediaController(sharedResource);
+        this.userController = new UserController(sharedResource);
     }
 
     @GetMapping("/service/{service_id}")
@@ -72,7 +76,7 @@ public class ServiceRestController extends RestControllerBase {
 
     @PostMapping("/service/create/{service_id}/media")
     public ResponseEntity<String> uploadServiceMediaMapping(@PathVariable("service_id") int serviceId,
-            @RequestHeader("Content-Disposition") String dispositionStr, byte[] data) {
+            @RequestHeader("Content-Disposition") String dispositionStr, @RequestBody byte[] data) {
 
         Service service = serviceController.findServiceByID(serviceId);
         if(service == null){
@@ -86,7 +90,7 @@ public class ServiceRestController extends RestControllerBase {
             String filepath = file.getAbsolutePath();
             String ext = FileUtil.getExtension(file.getName());
             if(ext.equals("mp4")){
-                filepath = FileUtil.removeExtension(filepath).concat("m3u8");
+                filepath = FileUtil.removeExtension(filepath).concat(".m3u8");
             }
             mediaId = mediaController.insertServiceMediaToDB(filepath, service.getOwnerId(), serviceId);
         } catch (SQLException | IOException e) {
@@ -104,26 +108,44 @@ public class ServiceRestController extends RestControllerBase {
 
     @PostMapping("/service/create")
     public ResponseEntity<String> createServiceDetailsMapping(@RequestBody String content){
-        JSONObject json = new JSONObject(new JSONTokener(content));
-        // Service service = serviceController.findServiceByID(json.getInt("service_id"));
-        // if(service != null){
-        //     return ResponseEntity.ok(createResponse("failed", "a service with the specified id already exists").toString());
-        // }
+        JSONObject json = null;
+        try {
+            json = new JSONObject(new JSONTokener(content));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+        int ownerId = json.getInt("owner_id");
+        User user = userController.getUserFromDB(ownerId);
+        if (user == null) {
+            return ResponseEntity.internalServerError()
+                    .body(createResponse("failed", "no user with the given user_id was found").toString());
+        }
+        Service service = null;
+        try {
+            service = publishService(json, ownerId);
+        } catch (SQLException | InterruptedException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+        
+        return ResponseEntity.ok(service.parseJson().toString());
+    }
 
+    private Service publishService(JSONObject json, int ownerId) throws SQLException, InterruptedException{
+        int id = serviceController.generateServiceID();
         Service service = new Service.ServiceBuilder()
+            .setServiceId(id)
             .setServiceTitle(json.getString("service_title"))
             .setServiceDescription(json.getString("service_description"))
             // .setServiceCategory(ServiceCategory.parse(json.getString("service_category")))
             .setServicePrice(json.getDouble("service_price"))
             // .setServiceCurrency(json.getString("service_currency"))
             .setDatePosted(LocalDateTime.parse(json.getString("date_posted")))
-            .setOwnerId(json.getInt("owner_id"))
+            .setOwnerId(ownerId)
             .build();
-        
-        if(!serviceController.writeServiceToDB(service)){
-            return ResponseEntity.internalServerError().build();
-        }
-        return ResponseEntity.ok(createResponse("success", "service successfully created").toString());
+        serviceController.writeServiceToDB(service);
+        return service;
     }
     
 }

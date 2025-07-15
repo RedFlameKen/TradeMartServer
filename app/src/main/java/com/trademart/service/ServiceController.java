@@ -20,6 +20,17 @@ public class ServiceController {
         this.dbController = sharedResource.getDatabaseController();
     }
 
+    public int generateServiceID(){
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        int id = IDGenerator.generateDBID(sharedResource.getDatabaseController(), "services", "service_id");
+        sharedResource.unlock();
+        return id;
+    }
+
     public Service findServiceByID(int serviceId){
         String command = "select * from services where service_id=" + serviceId;
         Service service = null;
@@ -75,34 +86,23 @@ public class ServiceController {
         return services;
     }
 
-    public boolean writeServiceToDB(Service service){
+    public void writeServiceToDB(Service service) throws SQLException, InterruptedException {
         String command = "insert into services(service_id,service_title,service_category,service_description,service_price,service_currency,date_posted, owner_id) values (?,?,?,?,?,?,?,?)";
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return false;
-        }
-        try {
-            int serviceId = IDGenerator.generateDBID(dbController, "services", "service_id");
-            PreparedStatement prep = dbController.prepareStatement(command);
+        sharedResource.lock();
 
-            prep.setInt(1, serviceId);
-            prep.setString(2, service.getServiceTitle());
-            prep.setString(3, service.getServiceCategory().toString());
-            prep.setString(4, service.getServiceDescription());
-            prep.setDouble(5, service.getServicePrice());
-            prep.setString(6, service.getServiceCurrency());
-            prep.setTimestamp(7, Timestamp.valueOf(service.getDatePosted()));
-            prep.setInt(8, service.getOwnerId());
-            prep.execute();
+        PreparedStatement prep = dbController.prepareStatement(command);
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+        prep.setInt(1, service.getServiceId());
+        prep.setString(2, service.getServiceTitle());
+        prep.setString(3, service.getServiceCategory().toString());
+        prep.setString(4, service.getServiceDescription());
+        prep.setDouble(5, service.getServicePrice());
+        prep.setString(6, service.getServiceCurrency());
+        prep.setTimestamp(7, Timestamp.valueOf(service.getDatePosted()));
+        prep.setInt(8, service.getOwnerId());
+        prep.execute();
+
         sharedResource.unlock();
-        return true;
     }
 
     public ArrayList<Integer> getServiceMediaIDs(int serviceId) throws SQLException{

@@ -2,9 +2,11 @@ package com.trademart.service;
 
 import java.time.LocalDateTime;
 
+import org.json.JSONObject;
+
 public class Service {
 
-    private double serviceId;
+    private int serviceId;
     private String serviceTitle;
     private ServiceCategory serviceCategory;
     private String serviceDescription;
@@ -24,7 +26,7 @@ public class Service {
         ownerId = builder.ownerId;
     }
 
-    public double getServiceId() {
+    public int getServiceId() {
         return serviceId;
     }
 
@@ -55,10 +57,22 @@ public class Service {
     public int getOwnerId() {
         return ownerId;
     }
-    
+
+    public JSONObject parseJson(){
+        return new JSONObject()
+            .put("service_id", serviceId)
+            .put("service_title", serviceTitle)
+            .put("service_category", serviceCategory)
+            .put("service_description", serviceDescription)
+            .put("date_posted", datePosted)
+            .put("service_price", servicePrice)
+            .put("service_currency", serviceCurrency)
+            .put("owner_id", ownerId);
+    }
+
     public static class ServiceBuilder {
 
-        private double serviceId;
+        private int serviceId;
         private String serviceTitle;
         private ServiceCategory serviceCategory;
         private String serviceDescription;
@@ -76,7 +90,7 @@ public class Service {
             datePosted = null;
         }
 
-        public ServiceBuilder setServiceId(double serviceId) {
+        public ServiceBuilder setServiceId(int serviceId) {
             this.serviceId = serviceId;
             return this;
         }

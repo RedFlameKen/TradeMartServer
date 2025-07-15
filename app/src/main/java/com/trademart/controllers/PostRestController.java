@@ -118,7 +118,7 @@ public class PostRestController extends RestControllerBase {
             Logger.log("received a bad request upon publishing a post", LogLevel.WARNING);
             return ResponseEntity
                 .badRequest()
-                .body(createResponse("failed", "received a bad request upon login").toString());
+                .body(createResponse("failed", "received a bad request upon publish").toString());
         }
         int userId = json.getInt("user_id");
         User user = userController.getUserFromDB(userId);
