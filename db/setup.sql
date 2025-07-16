@@ -78,6 +78,69 @@ create table if not exists job_listings (
     foreign key(owner_id) references users(user_id)
 );
 
+create table if not exists payments (
+    payment_id int primary key,
+    type varchar(7),
+    amount double,
+    is_confirmed bit,
+    receiver_id int,
+    sender_id int,
+    foreign key(receiver_id) references users(user_id),
+    foreign key(sender_id) references users(user_id)
+);
+
+create table if not exists job_payment (
+    payment_id int,
+    job_id int,
+    foreign key(payment_id) references payments(payment_id),
+    foreign key(job_id) references job_listings(job_id)
+);
+
+create table if not exists service_payment (
+    payment_id int,
+    service_id int,
+    foreign key(payment_id) references payments(payment_id),
+    foreign key(service_id) references services(service_id)
+);
+
+create table if not exists convos (
+    convo_id int primary key,
+    user1_id int,
+    user2_id int,
+    foreign key(user1_id) references users(user_id),
+    foreign key(user2_id) references users(user_id)
+);
+
+create table if not exists chats (
+    chat_id int primary key,
+    convo_type varchar(7),
+    time_sent datetime,
+    sender_id int,
+    convo_id int,
+    foreign key(sender_id) references users(user_id),
+    foreign key(convo_id) references convos(convo_id)
+);
+
+create table if not exists message_chat (
+    chat_id int,
+    message varchar(4096),
+    foreign key(chat_id) references chats(chat_id)
+);
+
+create table if not exists media_chat (
+    chat_id int,
+    media_id int,
+    foreign key(media_id) references media(media_id),
+    foreign key(chat_id) references chats(chat_id)
+);
+
+create table if not exists payment_chat (
+    chat_id int,
+    payment_id int,
+    foreign key(payment_id) references payments(payment_id),
+    foreign key(chat_id) references chats(chat_id)
+);
+
 create table if not exists media (
     media_id int primary key,
     media_type varchar(5),

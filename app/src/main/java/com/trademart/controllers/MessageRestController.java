@@ -1,100 +1,119 @@
 package com.trademart.controllers;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 
-import org.springframework.web.bind.annotation.GetMapping;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.trademart.async.SharedResource;
-import com.trademart.db.DatabaseController;
-import com.trademart.messaging.Message;
-import com.trademart.messaging.MessageCollection;
+import com.trademart.messaging.Convo;
+import com.trademart.messaging.MessageController;
+import com.trademart.messaging.chat.Chat;
+import com.trademart.user.User;
+import com.trademart.user.UserController;
 import com.trademart.util.Logger;
 import com.trademart.util.Logger.LogLevel;
 
 @RestController
-@RequestMapping("/message")
-public class MessageRestController {
+public class MessageRestController extends RestControllerBase {
 
-    private ArrayList<Message> messages = new ArrayList<>();
     private SharedResource sharedResource;
+    private UserController userController;
+    private MessageController messageController;
 
     public MessageRestController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
+        userController = new UserController(sharedResource);
+        messageController = new MessageController(sharedResource);
     }
 
-    @PostMapping("/send")
-    public String receiveMessage(@RequestBody Message message){
-        storeMessage(message);
-        return "Message Sent!";
-    }
-
-    private void storeMessage(Message message) throws ResponseStatusException {
+    @PostMapping("/message/send")
+    public ResponseEntity<String> sendChatMapping(@RequestBody String body){
+        JSONObject json = null;
         try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            Logger.log("Unable to lock resources for storing message", LogLevel.WARNING);
-            throw new ResponseStatusException(500, "Internal Server Error", e);
+            json = new JSONObject(new JSONTokener(body));
+        } catch (JSONException e){
+            return createBadRequestResponse("MessageRestController#sendChatMapping()", "json was badly formatted");
         }
-        DatabaseController dbController = sharedResource.getDatabaseController();
-
-        try {
-            PreparedStatement prep = dbController.prepareStatement("insert into messages(username, message, time_sent) values (?, ?, ?)");
-            prep.setString(1, message.getUsername());
-            prep.setString(2, message.getMessage());
-            LocalDateTime timeSent = LocalDateTime.parse(message.getTimeSent());
-            prep.setTimestamp(3, Timestamp.valueOf(timeSent));
-
-            prep.execute();
-        } catch (SQLException e) {
-            Logger.log("Unable to store message in database", LogLevel.WARNING);
-            e.printStackTrace();
-            throw new ResponseStatusException(500, "Internal Server Error", e);
+        int user1Id = json.getInt("user1_id");
+        int user2Id = json.getInt("user2_id");
+        User user1 = userController.getUserFromDB(user1Id);
+        if(user1 == null){
+            return createBadRequestResponse("MessageRestController#sendChatMapping()", "no user with user1_id found");
         }
-
-        sharedResource.unlock();
-    }
-
-    @GetMapping("/fetch")
-    public MessageCollection distributeMessages(){
-        return fetchMessages();
-    }
-
-    private MessageCollection fetchMessages(){
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            Logger.log("Unable to lock resources for fetching messages", LogLevel.WARNING);
-            throw new ResponseStatusException(500, "Internal Server Error", e);
+        User user2 = userController.getUserFromDB(user2Id);
+        if(user2 == null){
+            return createBadRequestResponse("MessageRestController#sendChatMapping()", "no user with user2_id found");
         }
-        MessageCollection messageCollection;
-        ArrayList<Message> messages = new ArrayList<>();
-        DatabaseController dbController = sharedResource.getDatabaseController();
-        try {
-            ResultSet rs = dbController.execQuery("select * from messages");
-            while(rs.next()){
-                Message message = new Message();
-                message.setUsername(rs.getString("username"));
-                message.setMessage(rs.getString("message"));
-                message.setTimeSent(rs.getString("time_sent"));
-                messages.add(message);
+        Convo convo = messageController.findConvoByID(json.getInt("convo_id"));
+        if(convo == null){
+            try {
+                messageController.initConvo(user1Id, user2Id);
+            } catch (InterruptedException | SQLException e) {
+                e.printStackTrace();
+                return ResponseEntity
+                    .badRequest()
+                    .body(createResponse("failed", "an error happened in the server")
+                            .toString());
             }
-        } catch (SQLException e) {
-            Logger.log("Unable to fetch messages!", LogLevel.WARNING);
-            throw new ResponseStatusException(500, "Internal Server Error", e);
         }
-        messageCollection = new MessageCollection(messages);
-        sharedResource.unlock();
-        return messageCollection;
+        Chat chat = messageController.createChat(json);
+        try {
+            messageController.writeChatToDB(chat);
+        } catch (InterruptedException | SQLException e) {
+            e.printStackTrace();
+                return ResponseEntity
+                    .badRequest()
+                    .body(createResponse("failed", "unable to send the message")
+                            .toString());
+        }
+        return ResponseEntity.ok(createResponse("success", "successfully sent the message").toString());
+    }
+
+    @PostMapping("/message")
+    public ResponseEntity<String> fetchMessageIdsMapping(@RequestBody String body){
+        JSONObject json = null;
+        try {
+            json = new JSONObject(new JSONTokener(body));
+        } catch (JSONException e){
+            return createBadRequestResponse("MessageRestController#fetchMessageIdsMapping()", "json was badly formatted");
+        }
+        int userId = json.getInt("user_id");
+        User user = userController.getUserFromDB(userId);
+        if(user == null){
+            return createBadRequestResponse("MessageRestController#fetchMessageIdsMapping()", "no user with user_id found");
+        }
+        int convoId = json.getInt("convo_id");
+        int receivedCount = json.getInt("received_count");
+        ArrayList<Chat> chats = null;
+        try {
+            chats = messageController.getChatsInConvo(convoId, receivedCount, receivedCount+10);
+        } catch (InterruptedException | SQLException e) {
+            e.printStackTrace();
+            return ResponseEntity
+                .badRequest()
+                .body(createResponse("failed", "unabled to fetch chats")
+                        .toString());
+        }
+
+        JSONObject responseJson = messageController.chatArrayToJSON(chats);
+
+        return ResponseEntity.ok(responseJson.toString());
+    }
+
+    private ResponseEntity<String> createBadRequestResponse(String codeLocation, String message){
+        Logger.log("Received a bad request to \"/message/send\" " + codeLocation,
+                LogLevel.WARNING);
+        return ResponseEntity
+            .badRequest()
+            .body(createResponse("failed", message)
+                    .toString());
     }
 
 }
