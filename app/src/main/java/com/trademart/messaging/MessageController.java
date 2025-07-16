@@ -1,5 +1,7 @@
 package com.trademart.messaging;
 
+import static com.trademart.util.Logger.LogLevel.INFO;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -53,12 +55,12 @@ public class MessageController {
         return id;
     }
 
-    public Chat createChat(JSONObject json){
+    public Chat createChat(JSONObject json, int convoId){
         Chat.Builder builder = new Chat.Builder()
             .setChatId(generateChatID())
             .setTimeSent(LocalDateTime.now())
             .setSenderId(json.getInt("sender_id"))
-            .setConvoId(json.getInt("convo_id"));
+            .setConvoId(convoId);
         switch (ChatType.parse(json.getString("type"))) {
             case MEDIA:
                 return createMediaChat(builder, json);
@@ -92,7 +94,7 @@ public class MessageController {
     public void writeChatToDB(Chat chat) throws InterruptedException, SQLException{
         sharedResource.lock();
 
-        String command = "insert into chats(chat_id,chat_type,time_sent,sender_id,convo_id)values(?,?,?,?)";
+        String command = "insert into chats(chat_id,type,time_sent,sender_id,convo_id)values(?,?,?,?,?)";
 
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, chat.getChatId());
@@ -143,6 +145,21 @@ public class MessageController {
         return dbController.getCommandRowCount("select * from convos where convo_id="+convoId);
     }
 
+    private boolean hasConvo(int user1Id, int user2Id) throws InterruptedException, SQLException{
+        String command = "select * from convos where user1_id=? and user2_id=? or user1_id=? and user2_id=?";
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, user1Id);
+        prep.setInt(2, user2Id);
+        prep.setInt(3, user2Id);
+        prep.setInt(4, user1Id);
+        ResultSet rs = prep.executeQuery();
+        boolean result = false;
+        if(rs.isBeforeFirst())
+            if(rs.next()) result = true;
+        return result;
+    }
+
+
     public Convo findConvoByID(int convoId) {
         try {
             sharedResource.lock();
@@ -173,7 +190,55 @@ public class MessageController {
         return convo;
     }
 
-    public void initConvo(int user1Id, int user2Id) throws InterruptedException, SQLException{
+    public Convo findConvoByUserIds(int user1Id, int user2Id) throws InterruptedException, SQLException{
+        sharedResource.lock();
+
+        if(!hasConvo(user1Id, user2Id)) {
+            sharedResource.unlock();
+            return null;
+        }
+        Convo convo = null;
+        PreparedStatement prep = sharedResource.getDatabaseController()
+            .prepareStatement("select * from convos where user1_id=? and user2_id=? or user1_id=? and user2_id=?");
+        prep.setInt(1, user1Id);
+        prep.setInt(2, user2Id);
+        prep.setInt(3, user2Id);
+        prep.setInt(4, user1Id);
+        ResultSet rs = prep.executeQuery();
+        rs.next();
+        convo = new Convo.Builder()
+            .setConvoId(rs.getInt("convo_id"))
+            .setUser1Id(user1Id)
+            .setUser2Id(user2Id)
+            .build();
+
+        sharedResource.unlock();
+        return convo;
+
+    }
+
+    public ArrayList<Convo> findConvosByUserId(int userId) throws InterruptedException, SQLException{
+        ArrayList<Convo> convos = new ArrayList<>();
+        sharedResource.lock();
+        String command = "select * from convos where user1_id=? or user2_id=?";
+
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setInt(2, userId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            convos.add(new Convo.Builder()
+                    .setConvoId(rs.getInt("convo_id"))
+                    .setUser1Id(rs.getInt("user1_id"))
+                    .setUser2Id(rs.getInt("user2_id"))
+                    .build());
+        }
+
+        sharedResource.unlock();
+        return convos;
+    }
+
+    public Convo initConvo(int user1Id, int user2Id) throws InterruptedException, SQLException{
         int id = generateConvoID();
         Convo convo = new Convo.Builder()
             .setConvoId(id)
@@ -182,6 +247,7 @@ public class MessageController {
             .build();
 
         writeConvoToDB(convo);
+        return convo;
     }
 
     private void writeConvoToDB(Convo convo) throws InterruptedException, SQLException{
@@ -203,7 +269,7 @@ public class MessageController {
         ArrayList<Integer> ids = new ArrayList<>();
         sharedResource.lock();
 
-        String command = "select * from chats where convoId=? order by time_sent";
+        String command = "select * from chats where convo_id=? order by time_sent desc";
 
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, convoId);
@@ -221,7 +287,7 @@ public class MessageController {
         ArrayList<Chat> chats = new ArrayList<>();
         sharedResource.lock();
 
-        String command = "select * from chats where convoId=? order by time_sent";
+        String command = "select * from chats where convo_id=? order by time_sent desc";
 
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, convoId);
@@ -237,11 +303,27 @@ public class MessageController {
         return chats;
     }
 
+    public Chat getLastChat(int convoId) throws InterruptedException, SQLException{
+        Chat chat = null;
+        sharedResource.lock();
+        String command = "select * from chats where convo_id=? order by time_sent desc";
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, convoId);
+        ResultSet rs = prep.executeQuery();
+        if(rs.next()){
+            int id = rs.getInt("chat_id");
+            ChatType type = ChatType.parse(rs.getString("type"));
+            chat = getChatById(id, type);
+        }
+        sharedResource.unlock();
+        return chat;
+    }
+
     public ArrayList<Chat> getChatsInConvo(int convoId, int startIndex, int endIndex) throws InterruptedException, SQLException{
         ArrayList<Chat> chats = new ArrayList<>();
         sharedResource.lock();
 
-        String command = "select * from chats where convoId=? order by time_sent";
+        String command = "select * from chats where convo_id=? order by time_sent desc";
 
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, convoId);
@@ -269,7 +351,7 @@ public class MessageController {
                 .put("time_sent", chat.getTimeSent())
                 .put("sender_id", chat.getSenderId())
                 .put("convo_id", chat.getConvoId())
-                .put("chat_type", chat.getType());
+                .put("type", chat.getType());
             switch (chat.getType()) {
                 case MEDIA:
                     chatJson.put("media_id", ((MediaChat)chat).getMediaId());
@@ -292,17 +374,20 @@ public class MessageController {
         switch (chatType) {
             case MEDIA:
                 chat = getMediaChatById(id);
+                break;
             case MESSAGE:
                 chat = getMessageChatById(id);
+                break;
             case PAYMENT:
                 chat = getPaymentChatById(id);
+                break;
         }
         return chat;
 
     }
 
     private MessageChat getMessageChatById(int id) throws SQLException{
-        String command = "select * from chats join message_chat on chats.chat_id = message_chat.chat_id where chat.chat_id=?";
+        String command = "select * from chats join message_chat on chats.chat_id = message_chat.chat_id where chats.chat_id=?";
 
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, id);
@@ -322,7 +407,7 @@ public class MessageController {
     }
 
     private MediaChat getMediaChatById(int id) throws SQLException{
-        String command = "select * from chats join media_chat on chats.chat_id = media_chat.chat_id where chat.chat_id=?";
+        String command = "select * from chats join media_chat on chats.chat_id = media_chat.chat_id where chats.chat_id=?";
 
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, id);
@@ -342,7 +427,7 @@ public class MessageController {
     }
 
     private PaymentChat getPaymentChatById(int id) throws SQLException {
-        String command = "select * from chats join payment_chat on chats.chat_id = payment_chat.chat_id where chat.chat_id=?";
+        String command = "select * from chats join payment_chat on chats.chat_id = payment_chat.chat_id where chats.chat_id=?";
 
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, id);

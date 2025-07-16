@@ -91,6 +91,17 @@ public class DatabaseController {
         return rows;
     }
 
+    public boolean commandResultIsEmpty(String command){
+        try {
+            ResultSet rs = execQuery(command);
+            if(rs.next()) return true;
+        } catch (SQLException e) {
+            Logger.log("Unable to count rows from db", LogLevel.WARNING);
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public int getCommandRowCount(String command){
         int rows = 0;
         try {

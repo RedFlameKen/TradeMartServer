@@ -55,16 +55,16 @@ public class PostRestController extends RestControllerBase {
     }
 
     @GetMapping("/lorem")
-    public ResponseEntity<String> testMapping(@RequestHeader("Content-Range") String range){
+    public ResponseEntity<String> testMapping(){
         String data = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
-        ContentRange contentRange = null;
-        try {
-            contentRange = ContentRange.parse(new StringReader(range));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        System.out.printf("Content-Range: %s %d-%d/%d", contentRange.getUnits(), contentRange.getStart(), contentRange.getEnd(), contentRange.getLength());
-        ResponseEntity<String> response = ResponseEntity.status(206).contentLength(29).body(data.substring((int) contentRange.getStart(), (int) contentRange.getEnd()));
+        // ContentRange contentRange = null;
+        // try {
+        //     contentRange = ContentRange.parse(new StringReader(range));
+        // } catch (IOException e) {
+        //     e.printStackTrace();
+        // }
+        // System.out.printf("Content-Range: %s %d-%d/%d", contentRange.getUnits(), contentRange.getStart(), contentRange.getEnd(), contentRange.getLength());
+        ResponseEntity<String> response = ResponseEntity.status(206).contentLength(29).body(data);
         return response;
 
     }
