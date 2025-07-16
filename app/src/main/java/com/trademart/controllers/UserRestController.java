@@ -3,6 +3,7 @@ package com.trademart.controllers;
 import static com.trademart.util.Logger.LogLevel.WARNING;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 
@@ -108,7 +109,11 @@ public class UserRestController extends RestControllerBase {
         if(user == null){
             return ResponseEntity.notFound().build();
         }
-        byte[] data = mediaController.readFileBytes(new File(user.getProfilePicturePath()));
+        String profilePicturePath = user.getProfilePicturePath();
+        if(profilePicturePath.equals("") || profilePicturePath == null){
+            return ResponseEntity.notFound().build();
+        }
+        byte[] data = mediaController.readFileBytes(new File(profilePicturePath));
         String filename = userController.createProfilePicturePath(mediaController.imagesDir(), userId, "jpg");
         File file = new File(filename);
         HttpHeaders headers = new HttpHeaders();

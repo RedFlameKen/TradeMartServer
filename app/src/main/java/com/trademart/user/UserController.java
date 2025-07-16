@@ -80,6 +80,10 @@ public class UserController {
 
     private User getUserFromResultSet(ResultSet rs) throws SQLException {
         rs.next();
+        String profilePicturePath = rs.getString("profile_picture_path");
+        if(rs.wasNull()){
+            profilePicturePath = "";
+        }
         return new UserBuilder()
                 .setId(rs.getInt("user_id"))
                 .setUsername(rs.getString("username"))
@@ -87,7 +91,7 @@ public class UserController {
                 .setPassword(rs.getString("password"))
                 .setPasswordSalt(rs.getString("password_salt"))
                 .setVerified(rs.getBoolean("verified"))
-                .setProfilePicturePath(rs.getString("profile_picture_path"))
+                .setProfilePicturePath(profilePicturePath)
                 .build();
     }
 
