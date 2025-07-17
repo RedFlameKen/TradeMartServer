@@ -97,24 +97,24 @@ public class MessageRestController extends RestControllerBase {
         try {
             json = new JSONObject(new JSONTokener(body));
         } catch (JSONException e){
-            return createBadRequestResponse("MessageRestController#fetchMessageIdsMapping()", "json was badly formatted");
+            return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "json was badly formatted");
         }
         int user1Id = json.getInt("user1_id");
         int user2Id = json.getInt("user2_id");
         User user1 = userController.getUserFromDB(user1Id);
         if(user1 == null){
-            return createBadRequestResponse("MessageRestController#sendChatMapping()", "no user with user1_id found");
+            return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user1_id found");
         }
         User user2 = userController.getUserFromDB(user2Id);
         if(user2 == null){
-            return createBadRequestResponse("MessageRestController#sendChatMapping()", "no user with user2_id found");
+            return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user2_id found");
         }
         ArrayList<Chat> chats = null;
         try {
             Logger.log("getting convo", INFO);
             Convo convo = messageController.findConvoByUserIds(user1Id, user2Id);
             if(convo == null){
-                return createBadRequestResponse("MessageRestController#sendChatMapping()", "no convo found with user1_id and user2_id found");
+                return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no convo found with user1_id and user2_id found");
             }
             int receivedCount = json.getInt("received_count");
             chats = messageController.getChatsInConvo(convo.getConvoId(), receivedCount, receivedCount+10);
