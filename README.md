@@ -62,12 +62,12 @@ through the gradle wrapper script.
 
 on Linux:
 ```
-./gradlew run
+./gradlew bootRun
 ```
 
 on Windows:
 ```
-gradle.bat run
+gradle.bat bootRun
 ```
 
 ## Requests
