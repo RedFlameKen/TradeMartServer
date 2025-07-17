@@ -75,9 +75,11 @@ public class MessageRestController extends RestControllerBase {
                             .toString());
             }
         }
-        Chat chat = messageController.createChat(json, convo.getConvoId());
         try {
+            Chat chat = messageController.createChat(json, convo.getConvoId());
             messageController.writeChatToDB(chat);
+        } catch (JSONException e) {
+            createBadRequestResponse("MessageRestController#sendChatMapping", "the sent json was badly formatted");
         } catch (InterruptedException | SQLException e) {
             e.printStackTrace();
                 return ResponseEntity

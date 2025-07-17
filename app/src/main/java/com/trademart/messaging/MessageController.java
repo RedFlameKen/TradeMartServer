@@ -1,6 +1,5 @@
 package com.trademart.messaging;
 
-import static com.trademart.util.Logger.LogLevel.INFO;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,7 +8,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
-import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.trademart.async.SharedResource;
@@ -55,7 +54,7 @@ public class MessageController {
         return id;
     }
 
-    public Chat createChat(JSONObject json, int convoId){
+    public Chat createChat(JSONObject json, int convoId)throws JSONException{
         Chat.Builder builder = new Chat.Builder()
             .setChatId(generateChatID())
             .setTimeSent(LocalDateTime.now())
@@ -73,19 +72,19 @@ public class MessageController {
         }
     }
 
-    private MessageChat createMessageChat(Chat.Builder builder, JSONObject json){
+    private MessageChat createMessageChat(Chat.Builder builder, JSONObject json)throws JSONException{
         MessageChat.Builder nBuilder = MessageChat.Builder.of(builder)
             .setMessage(json.getString("message"));
         return nBuilder.build();
     }
 
-    private PaymentChat createPaymentChat(Chat.Builder builder, JSONObject json){
+    private PaymentChat createPaymentChat(Chat.Builder builder, JSONObject json)throws JSONException{
         PaymentChat.Builder nBuilder = PaymentChat.Builder.of(builder)
             .setPaymentId(json.getInt("payment_id"));
         return nBuilder.build();
     }
 
-    private MediaChat createMediaChat(Chat.Builder builder, JSONObject json){
+    private MediaChat createMediaChat(Chat.Builder builder, JSONObject json)throws JSONException{
         MediaChat.Builder nBuilder = MediaChat.Builder.of(builder)
             .setMediaId(json.getInt("media_id"));
         return nBuilder.build();

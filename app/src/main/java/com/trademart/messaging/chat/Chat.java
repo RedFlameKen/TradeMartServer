@@ -88,7 +88,7 @@ public class Chat {
             return this;
         }
 
-        public Chat build(){
+        protected Chat build(){
             return new Chat(this);
         }
 

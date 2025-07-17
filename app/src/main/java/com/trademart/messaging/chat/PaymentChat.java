@@ -69,13 +69,11 @@ public class PaymentChat extends Chat {
         public static Builder of(Chat.Builder builder){
             Chat chat = builder.build();
 
-            PaymentChat.Builder nBuilder = new PaymentChat.Builder();
-            nBuilder.setChatId(chat.getChatId());
-            nBuilder.setTimeSent(chat.getTimeSent());
-            nBuilder.setSenderId(chat.getSenderId());
-            nBuilder.setConvoId(chat.getConvoId());
-
-            return nBuilder;
+            return new PaymentChat.Builder()
+                .setChatId(chat.getChatId())
+                .setTimeSent(chat.getTimeSent())
+                .setSenderId(chat.getSenderId())
+                .setConvoId(chat.getConvoId());
         }
     }
 
