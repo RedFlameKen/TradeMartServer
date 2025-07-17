@@ -53,7 +53,7 @@ public class PaymentController {
     }
 
     private ServicePayment findServicePaymentById(int id) throws InterruptedException, SQLException {
-        String command = "select * from payments join service_payment on payments.payment_id = service_payment.payment_id where payment_id=?";
+        String command = "select * from payments join service_payment on payments.payment_id = service_payment.payment_id where payments.payment_id=?";
         PreparedStatement prep = dbController.prepareStatement(command);
 
         prep.setInt(1, id);
@@ -117,7 +117,7 @@ public class PaymentController {
                 .setPaymentId(generatePaymentID())
                 .setType(PaymentType.SERVICE)
                 .setAmount(json.getDouble("amount"))
-                .setConfirmed(json.getBoolean("is_confirmed"))
+                .setConfirmed(false)
                 .setSenderId(json.getInt("sender_id"))
                 .setReceiverId(json.getInt("receiver_id"))
                 .setServiceId(json.getInt("service_id"))

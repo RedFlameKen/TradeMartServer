@@ -55,6 +55,9 @@ public class PaymentRestController extends RestControllerBase {
             e.printStackTrace();
             return internalServerErrorResponse("unable to get payment details");
         }
+        if(payment == null){
+            return ResponseEntity.ok(createResponse("success", "payment not found").toString());
+        }
         JSONObject responseJson = null;
         if(payment instanceof ServicePayment){
             Service service = serviceController.findServiceByID(((ServicePayment)payment).getServiceId());
@@ -62,7 +65,7 @@ public class PaymentRestController extends RestControllerBase {
         }
         if(payment instanceof JobPayment){
         }
-        return ResponseEntity.ok(createResponse("success", "created the service payment")
+        return ResponseEntity.ok(createResponse("success", "found the payment")
                 .put("entity", responseJson).toString());
     }
 
@@ -94,6 +97,7 @@ public class PaymentRestController extends RestControllerBase {
                 .put("entity", responseJson).toString());
     }
 
+    @PostMapping("/payment/confirm")
     public ResponseEntity<String> confirmPaymentMapping(@RequestBody String body){
         JSONObject json = null;
         int paymentId = -1;
