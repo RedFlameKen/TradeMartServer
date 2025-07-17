@@ -1,6 +1,7 @@
 package com.trademart.controllers;
 
 import org.json.JSONObject;
+import org.springframework.http.ResponseEntity;
 
 public class RestControllerBase {
 
@@ -12,4 +13,16 @@ public class RestControllerBase {
         return json;
     }
     
+    protected ResponseEntity<String> internalServerErrorResponse(String message){
+        return ResponseEntity.internalServerError().body(createResponse("failed", message).toString());
+    }
+
+    protected ResponseEntity<String> badRequestResponse(String message){
+        return ResponseEntity.badRequest().body(createResponse("failed", message).toString());
+    }
+
+    protected ResponseEntity<String> notFoundResponse(){
+        return ResponseEntity.notFound().build();
+    }
+
 }

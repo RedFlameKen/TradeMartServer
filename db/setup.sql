@@ -82,7 +82,7 @@ create table if not exists payments (
     payment_id int primary key,
     type varchar(7),
     amount double,
-    is_confirmed bit,
+    is_confirmed tinyint(1),
     receiver_id int,
     sender_id int,
     foreign key(receiver_id) references users(user_id),
