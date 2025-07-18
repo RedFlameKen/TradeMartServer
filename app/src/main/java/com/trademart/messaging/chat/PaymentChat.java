@@ -4,17 +4,31 @@ import java.time.LocalDateTime;
 
 import org.json.JSONObject;
 
+import com.trademart.payment.PaymentType;
+
 public class PaymentChat extends Chat {
 
     private int paymentId;
+    private PaymentType paymentType;
+    private double amount;
 
     protected PaymentChat(Builder builder) {
         super(builder);
         paymentId = builder.paymentId;
+        paymentType = builder.paymentType;
+        amount = builder.amount;
     }
 
     public int getPaymentId() {
         return paymentId;
+    }
+
+    public PaymentType getPaymentType() {
+        return paymentType;
+    }
+
+    public double getAmount() {
+        return amount;
     }
 
     @Override
@@ -27,9 +41,12 @@ public class PaymentChat extends Chat {
     public static class Builder extends Chat.Builder {
         
         private int paymentId;
-
+        private PaymentType paymentType;
+        private double amount;
         public Builder(){
             paymentId = -1;
+            paymentType = null;
+            amount = 0;
         }
 
         public Builder setPaymentId(int paymentId) {
@@ -66,11 +83,22 @@ public class PaymentChat extends Chat {
             return (Builder) super.setType(type);
         }
 
+        public Builder setPaymentType(PaymentType paymentType) {
+            this.paymentType = paymentType;
+            return this;
+        }
+
+        public Builder setAmount(double amount) {
+            this.amount = amount;
+            return this;
+        }
+
         public static Builder of(Chat.Builder builder){
             Chat chat = builder.build();
 
             return new PaymentChat.Builder()
                 .setChatId(chat.getChatId())
+                .setType(chat.getType())
                 .setTimeSent(chat.getTimeSent())
                 .setSenderId(chat.getSenderId())
                 .setConvoId(chat.getConvoId());

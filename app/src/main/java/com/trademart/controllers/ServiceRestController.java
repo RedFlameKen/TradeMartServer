@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.springframework.http.ContentDisposition;
@@ -71,6 +72,34 @@ public class ServiceRestController extends RestControllerBase {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
+        return ResponseEntity.ok(json.toString());
+    }
+
+    @GetMapping("/service/list/{user_id}")
+    public ResponseEntity<String> fetchServicesByUserIdMapping(@PathVariable("user_id") int userId){
+        User user = userController.getUserFromDB(userId);
+        if (user == null) {
+            return internalServerErrorResponse("no user with the given owner_id was found");
+        }
+        ArrayList<Service> services;
+        try {
+             services = serviceController.findServicesByUserId(userId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse("an internal server error occured");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse("an internal server error occured");
+        }
+
+        JSONObject json = createResponse("success", "fetched services");
+
+        JSONObject data = new JSONObject();
+        for (Service service : services) {
+            data.append("services", service.parseJson());
+        }
+        json.put("data", data);
         return ResponseEntity.ok(json.toString());
     }
 

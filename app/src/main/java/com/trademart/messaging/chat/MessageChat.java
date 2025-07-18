@@ -72,6 +72,7 @@ public class MessageChat extends Chat {
             return new MessageChat.Builder()
                 .setChatId(chat.getChatId())
                 .setTimeSent(chat.getTimeSent())
+                .setType(chat.getType())
                 .setSenderId(chat.getSenderId())
                 .setConvoId(chat.getConvoId());
         }

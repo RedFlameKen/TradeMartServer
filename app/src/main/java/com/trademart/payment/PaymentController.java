@@ -10,18 +10,15 @@ import org.json.JSONObject;
 import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
 import com.trademart.db.IDGenerator;
-import com.trademart.service.ServiceController;
 
 public class PaymentController {
 
     private SharedResource sharedResource;
     private DatabaseController dbController;
-    private ServiceController serviceController;
 
-    public PaymentController(SharedResource sharedResource, ServiceController serviceController) {
+    public PaymentController(SharedResource sharedResource) {
         this.sharedResource = sharedResource;
         dbController = sharedResource.getDatabaseController();
-        this.serviceController = serviceController;
     }
 
     // TODO: Method for generating a json response of a payment containing complete information about service and job payments
@@ -35,6 +32,21 @@ public class PaymentController {
         int id = IDGenerator.generateDBID(sharedResource.getDatabaseController(), "payments", "payment_id");
         sharedResource.unlock();
         return id;
+    }
+
+    public Payment findPaymentById(int id) throws InterruptedException, SQLException {
+        sharedResource.lock();
+        ServicePayment servicePayment = findServicePaymentById(id);
+        if(servicePayment != null){
+            sharedResource.unlock();
+            return servicePayment;
+        }
+        JobPayment jobPayment = findJobPaymentById(id);
+        if(jobPayment != null){
+            sharedResource.unlock();
+            return jobPayment;
+        }
+        return null;
     }
 
     public Payment findPaymentById(int id, PaymentType type) throws InterruptedException, SQLException {

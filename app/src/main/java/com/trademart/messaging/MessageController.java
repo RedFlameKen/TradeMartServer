@@ -1,6 +1,8 @@
 package com.trademart.messaging;
 
 
+import static com.trademart.util.Logger.LogLevel.INFO;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -55,12 +57,15 @@ public class MessageController {
     }
 
     public Chat createChat(JSONObject json, int convoId)throws JSONException{
+        ChatType type = ChatType.parse(json.getString("type"));
+        Logger.log("type: " + type.toString(), INFO);
         Chat.Builder builder = new Chat.Builder()
             .setChatId(generateChatID())
             .setTimeSent(LocalDateTime.now())
+            .setType(type)
             .setSenderId(json.getInt("sender_id"))
             .setConvoId(convoId);
-        switch (ChatType.parse(json.getString("type"))) {
+        switch (type) {
             case MEDIA:
                 return createMediaChat(builder, json);
             case MESSAGE:
@@ -342,31 +347,6 @@ public class MessageController {
         return chats;
     }
 
-    public JSONObject chatArrayToJSON(ArrayList<Chat> chats){
-        JSONObject json = new JSONObject();
-        for (Chat chat : chats) {
-            JSONObject chatJson = new JSONObject()
-                .put("chat_id", chat.getChatId())
-                .put("time_sent", chat.getTimeSent())
-                .put("sender_id", chat.getSenderId())
-                .put("convo_id", chat.getConvoId())
-                .put("type", chat.getType());
-            switch (chat.getType()) {
-                case MEDIA:
-                    chatJson.put("media_id", ((MediaChat)chat).getMediaId());
-                    break;
-                case MESSAGE:
-                    chatJson.put("message", ((MessageChat)chat).getMessage());
-                    break;
-                case PAYMENT:
-                    chatJson.put("payment_id", ((PaymentChat)chat).getPaymentId());
-                    break;
-            }
-            json.append("chats", chatJson);
-        }
-        return json;
-    }
-
 
     private Chat getChatById(int id, ChatType chatType) throws SQLException{
         Chat chat = null;
@@ -391,16 +371,19 @@ public class MessageController {
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, id);
         ResultSet rs = prep.executeQuery();
-        rs.next();
-        MessageChat chat = new MessageChat.Builder()
-            .setMessage(rs.getString("message"))
-            .setChatId(id)
-            .setSenderId(rs.getInt("sender_id"))
-            .setConvoId(rs.getInt("convo_id"))
-            .setTimeSent(rs.getTimestamp("time_sent").toLocalDateTime())
-            .build();
-        prep.execute();
-        prep.close();
+        MessageChat chat = null;
+        if(rs.next()){
+            chat = new MessageChat.Builder()
+                .setMessage(rs.getString("message"))
+                .setChatId(id)
+                .setType(ChatType.MESSAGE)
+                .setSenderId(rs.getInt("sender_id"))
+                .setConvoId(rs.getInt("convo_id"))
+                .setTimeSent(rs.getTimestamp("time_sent").toLocalDateTime())
+                .build();
+            prep.execute();
+            prep.close();
+        }
 
         return chat;
     }
@@ -411,16 +394,19 @@ public class MessageController {
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, id);
         ResultSet rs = prep.executeQuery();
-        rs.next();
-        MediaChat chat = new MediaChat.Builder()
-            .setMediaId(rs.getInt("media_id"))
-            .setChatId(id)
-            .setSenderId(rs.getInt("sender_id"))
-            .setConvoId(rs.getInt("convo_id"))
-            .setTimeSent(rs.getTimestamp("time_sent").toLocalDateTime())
-            .build();
-        prep.execute();
-        prep.close();
+        MediaChat chat = null;
+        if(rs.next()){
+            chat = new MediaChat.Builder()
+                .setMediaId(rs.getInt("media_id"))
+                .setChatId(id)
+                .setSenderId(rs.getInt("sender_id"))
+                .setConvoId(rs.getInt("convo_id"))
+                .setType(ChatType.MEDIA)
+                .setTimeSent(rs.getTimestamp("time_sent").toLocalDateTime())
+                .build();
+            prep.execute();
+            prep.close();
+        }
 
         return chat;
     }
@@ -431,17 +417,19 @@ public class MessageController {
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, id);
         ResultSet rs = prep.executeQuery();
-        rs.next();
-        PaymentChat chat = new PaymentChat.Builder()
-            .setPaymentId(rs.getInt("payment_id"))
-            .setChatId(id)
-            .setSenderId(rs.getInt("sender_id"))
-            .setConvoId(rs.getInt("convo_id"))
-            .setTimeSent(rs.getTimestamp("time_sent").toLocalDateTime())
-            .build();
-        prep.execute();
-        prep.close();
-
+        PaymentChat chat = null;
+        if(rs.next()){
+            chat = new PaymentChat.Builder()
+                .setPaymentId(rs.getInt("payment_id"))
+                .setChatId(id)
+                .setType(ChatType.PAYMENT)
+                .setSenderId(rs.getInt("sender_id"))
+                .setConvoId(rs.getInt("convo_id"))
+                .setTimeSent(rs.getTimestamp("time_sent").toLocalDateTime())
+                .build();
+            prep.execute();
+            prep.close();
+        }
         return chat;
     }
 }

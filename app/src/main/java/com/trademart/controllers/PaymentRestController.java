@@ -29,7 +29,7 @@ public class PaymentRestController extends RestControllerBase {
     public PaymentRestController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
         serviceController = new ServiceController(sharedResource);
-        paymentController = new PaymentController(sharedResource, serviceController);
+        paymentController = new PaymentController(sharedResource);
     }
 
     @PostMapping("/payment/fetch")

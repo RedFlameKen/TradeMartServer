@@ -20,6 +20,11 @@ import com.trademart.messaging.chat.Chat;
 import com.trademart.messaging.chat.MediaChat;
 import com.trademart.messaging.chat.MessageChat;
 import com.trademart.messaging.chat.PaymentChat;
+import com.trademart.payment.Payment;
+import com.trademart.payment.PaymentController;
+import com.trademart.payment.ServicePayment;
+import com.trademart.service.Service;
+import com.trademart.service.ServiceController;
 import com.trademart.user.User;
 import com.trademart.user.UserController;
 import com.trademart.util.Logger;
@@ -31,11 +36,15 @@ public class MessageRestController extends RestControllerBase {
     private SharedResource sharedResource;
     private UserController userController;
     private MessageController messageController;
+    private PaymentController paymentController;
+    private ServiceController serviceController;
 
     public MessageRestController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
         userController = new UserController(sharedResource);
         messageController = new MessageController(sharedResource);
+        paymentController = new PaymentController(sharedResource);
+        serviceController = new ServiceController(sharedResource);
     }
 
     @PostMapping("/message/send")
@@ -75,11 +84,12 @@ public class MessageRestController extends RestControllerBase {
                             .toString());
             }
         }
+        Chat chat;
         try {
-            Chat chat = messageController.createChat(json, convo.getConvoId());
+            chat = messageController.createChat(json, convo.getConvoId());
             messageController.writeChatToDB(chat);
         } catch (JSONException e) {
-            createBadRequestResponse("MessageRestController#sendChatMapping", "the sent json was badly formatted");
+            return createBadRequestResponse("MessageRestController#sendChatMapping", "the sent json was badly formatted");
         } catch (InterruptedException | SQLException e) {
             e.printStackTrace();
                 return ResponseEntity
@@ -87,7 +97,23 @@ public class MessageRestController extends RestControllerBase {
                     .body(createResponse("failed", "unable to send the message")
                             .toString());
         }
-        return ResponseEntity.ok(createResponse("success", "successfully sent the message").toString());
+        JSONObject chatJson = null;
+        Logger.log("json type: " + json.getString("type"), INFO);
+        Logger.log("chat type: " + chat.getType().toString(), INFO);
+        switch (chat.getType()) {
+            case MEDIA:
+                chatJson = ((MediaChat)chat).parseJson();
+                break;
+            case MESSAGE:
+                chatJson = ((MessageChat)chat).parseJson();
+                break;
+            case PAYMENT:
+                chatJson = ((PaymentChat)chat).parseJson();
+                break;
+        }
+        return ResponseEntity.ok(createResponse("success", "successfully sent the message")
+                .put("data", chatJson)
+                .toString());
     }
 
     @PostMapping("/message/fetch")
@@ -109,7 +135,7 @@ public class MessageRestController extends RestControllerBase {
         if(user2 == null){
             return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user2_id found");
         }
-        ArrayList<Chat> chats = null;
+        JSONObject responseJson = null;
         try {
             Logger.log("getting convo", INFO);
             Convo convo = messageController.findConvoByUserIds(user1Id, user2Id);
@@ -117,7 +143,9 @@ public class MessageRestController extends RestControllerBase {
                 return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no convo found with user1_id and user2_id found");
             }
             int receivedCount = json.getInt("received_count");
-            chats = messageController.getChatsInConvo(convo.getConvoId(), receivedCount, receivedCount+10);
+            ArrayList<Chat> chats = messageController.getChatsInConvo(convo.getConvoId(), receivedCount,
+                    receivedCount + 10);
+            responseJson = chatArrayToJSON(chats);
         } catch (InterruptedException | SQLException e) {
             e.printStackTrace();
             return ResponseEntity
@@ -126,7 +154,6 @@ public class MessageRestController extends RestControllerBase {
                         .toString());
         }
 
-        JSONObject responseJson = messageController.chatArrayToJSON(chats);
 
         Logger.log("sending response...", INFO);
         return ResponseEntity
@@ -153,17 +180,13 @@ public class MessageRestController extends RestControllerBase {
                 String username = userId == user1.getId() ? user2.getUsername() : user1.getUsername();
                 Chat lastChat = messageController.getLastChat(convo.getConvoId());
                 JSONObject chatJson = null;
-                switch (lastChat.getType()) {
-                    case MEDIA:
-                        chatJson = ((MediaChat)lastChat).parseJson();
-                        break;
-                    case MESSAGE:
-                        chatJson = ((MessageChat)lastChat).parseJson();
-                        break;
-                    case PAYMENT:
-                        chatJson = ((PaymentChat)lastChat).parseJson();
-                        break;
-                }
+                if(lastChat instanceof MediaChat){
+                    chatJson = ((MediaChat)lastChat).parseJson();
+                } else if(lastChat instanceof MessageChat){
+                    chatJson = ((MessageChat)lastChat).parseJson();
+                } else if(lastChat instanceof PaymentChat){
+                    chatJson = ((PaymentChat)lastChat).parseJson();
+                } 
                 JSONObject convoJson = new JSONObject()
                     .put("user_id", secondUserId)
                     .put("username", username)
@@ -190,6 +213,44 @@ public class MessageRestController extends RestControllerBase {
             .badRequest()
             .body(createResponse("failed", message)
                     .toString());
+    }
+
+    public JSONObject chatArrayToJSON(ArrayList<Chat> chats) throws InterruptedException, SQLException{
+        JSONObject json = new JSONObject();
+        for (Chat chat : chats) {
+            JSONObject chatJson = new JSONObject()
+                .put("chat_id", chat.getChatId())
+                .put("time_sent", chat.getTimeSent())
+                .put("sender_id", chat.getSenderId())
+                .put("convo_id", chat.getConvoId())
+                .put("type", chat.getType());
+            switch (chat.getType()) {
+                case MEDIA:
+                    chatJson.put("media_id", ((MediaChat)chat).getMediaId());
+                    break;
+                case MESSAGE:
+                    chatJson.put("message", ((MessageChat)chat).getMessage());
+                    break;
+                case PAYMENT:
+                    expoundPaymentChatJson((PaymentChat)chat, chatJson);
+                    break;
+            }
+            json.append("chats", chatJson);
+        }
+        return json;
+    }
+
+    private void expoundPaymentChatJson(PaymentChat chat, JSONObject chatJson) throws InterruptedException, SQLException{
+        Payment payment = paymentController.findPaymentById(chat.getPaymentId());
+        chatJson.put("payment_id", ((PaymentChat)chat).getPaymentId())
+            .put("amount", payment.getAmount());
+
+        if(payment instanceof ServicePayment){
+            Service service = serviceController.findServiceByID(
+                    ((ServicePayment)payment).getServiceId());
+            chatJson.put("payment_reason", service.getServiceTitle())
+                .put("payment_type", payment.getType());
+        }
     }
 
 }

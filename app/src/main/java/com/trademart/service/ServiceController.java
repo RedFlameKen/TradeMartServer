@@ -63,6 +63,28 @@ public class ServiceController {
         return service;
     }
 
+    public ArrayList<Service> findServicesByUserId(int userId) throws InterruptedException, SQLException{
+        ArrayList<Service> services = new ArrayList<>();
+        String command = "select * from services where owner_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            Service service = new Service.ServiceBuilder()
+                .setServiceId(rs.getInt("service_id"))
+                .setServiceTitle(rs.getString("service_title"))
+                .setServiceDescription(rs.getString("service_description"))
+                .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
+                .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
+                .setOwnerId(rs.getInt("owner_id"))
+                .build();
+            services.add(service);
+        }
+        sharedResource.unlock();
+        return services;
+    }
+
     public ArrayList<Service> getAllServices(){
         ArrayList<Service> services = new ArrayList<>();
         String command = "select * from services";
