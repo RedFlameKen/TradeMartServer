@@ -1,4 +1,4 @@
-package com.trademart.service;
+package com.trademart.job;
 
 public enum JobCategory {
 

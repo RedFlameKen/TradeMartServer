@@ -70,12 +70,12 @@ create table if not exists services (
 create table if not exists job_listings (
     job_id int primary key,
     job_title varchar(255),
-    job_type varchar(128),
+    amount double,
     job_category varchar(255),
     job_description varchar(1024),
     date_posted datetime,
-    owner_id int,
-    foreign key(owner_id) references users(user_id)
+    employer_id int,
+    foreign key(employer_id) references users(user_id)
 );
 
 create table if not exists payments (
