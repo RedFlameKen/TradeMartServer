@@ -151,6 +151,13 @@ create table if not exists media (
     foreign key(user_id) references users(user_id)
 );
 
+create table if not exists job_media (
+    media_id int,
+    job_id int,
+    foreign key(media_id) references media(media_id) on delete cascade,
+    foreign key(job_id) references job_listings(job_id) on delete cascade
+);
+
 create table if not exists service_media (
     media_id int,
     service_id int,

@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
+import com.trademart.job.JobController;
+import com.trademart.job.JobListing;
 import com.trademart.payment.JobPayment;
 import com.trademart.payment.Payment;
 import com.trademart.payment.PaymentController;
@@ -25,11 +27,13 @@ public class PaymentRestController extends RestControllerBase {
     private SharedResource sharedResource;
     private PaymentController paymentController;
     private ServiceController serviceController;
+    private JobController jobController;
 
     public PaymentRestController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
         serviceController = new ServiceController(sharedResource);
         paymentController = new PaymentController(sharedResource);
+        jobController = new JobController(sharedResource);
     }
 
     @PostMapping("/payment/fetch")
@@ -59,41 +63,26 @@ public class PaymentRestController extends RestControllerBase {
             return ResponseEntity.ok(createResponse("success", "payment not found").toString());
         }
         JSONObject responseJson = null;
-        if(payment instanceof ServicePayment){
-            Service service = serviceController.findServiceByID(((ServicePayment)payment).getServiceId());
-            responseJson = createServicePaymentResponseEntity((ServicePayment)payment, service);
-        }
-        if(payment instanceof JobPayment){
-        }
-        return ResponseEntity.ok(createResponse("success", "found the payment")
-                .put("entity", responseJson).toString());
-    }
+        try {
 
-    @PostMapping("/payment/create/service")
-    public ResponseEntity<String> createServicePaymentMapping(@RequestBody String body){
-        JSONObject json = null;
-        ServicePayment payment = null;
-        try {
-            json = new JSONObject(new JSONTokener(body));
-            payment = paymentController.createServicePayment(json);
-        } catch (JSONException e){
-            return badRequestResponse("request was badly formatted");
-        }
-        JSONObject responseJson = null;
-        try {
-            paymentController.writePaymentToDB(payment);
-            Service service = serviceController.findServiceByID(payment.getServiceId());
-            if(service == null) return notFoundResponse();
-            responseJson = createServicePaymentResponseEntity(payment, service);
+            if(payment instanceof ServicePayment){
+                Service service = serviceController.findServiceByID(((ServicePayment)payment).getServiceId());
+                responseJson = createServicePaymentResponseEntity((ServicePayment)payment, service);
+            }
+            if(payment instanceof JobPayment){
+                JobListing job = jobController.findJobByID(((JobPayment)payment).getJobId());
+                responseJson = createJobPaymentResponseEntity((JobPayment)payment, job);
+            }
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
-            return internalServerErrorResponse("unable to make a payment");
+            return internalServerErrorResponse("unable to get payment details");
         } catch (SQLException e) {
             e.printStackTrace();
-            return internalServerErrorResponse("unable to make a payment");
+            return internalServerErrorResponse("unable to get payment details");
         }
-        return ResponseEntity.ok(createResponse("success", "created the service payment")
+
+        return ResponseEntity.ok(createResponse("success", "found the payment")
                 .put("entity", responseJson).toString());
     }
 
@@ -128,34 +117,62 @@ public class PaymentRestController extends RestControllerBase {
                 .put("payment", payment.parseJson()).toString());
     }
 
-    // @PostMapping("/payment/create/job")
-    // public ResponseEntity<String> createJobPaymentMapping(@RequestBody String content){
-    //     JSONObject json = null;
-    //     ServicePayment payment = null;
-    //     try {
-    //         json = new JSONObject(new JSONTokener(body));
-    //         payment = paymentController.createServicePayment(json);
-    //     } catch (JSONException e){
-    //         return badRequestResponse("request was badly formatted");
-    //     }
-    //     JSONObject responseJson = null;
-    //     try {
-    //         paymentController.writePaymentToDB(payment);
-    //         Service service = serviceController.findServiceByID(payment.getServiceId());
-    //         if(service == null) return notFoundResponse();
-    //         responseJson = createServicePaymentResponseEntity(payment, service);
-    //     } catch (InterruptedException e) {
-    //         sharedResource.unlock();
-    //         e.printStackTrace();
-    //         return internalServerErrorResponse("unable to make a payment");
-    //     } catch (SQLException e) {
-    //         e.printStackTrace();
-    //         return internalServerErrorResponse("unable to make a payment");
-    //     }
-    //     return ResponseEntity.ok(createResponse("success", "created the service payment")
-    //             .put("entity", responseJson).toString());
-    // }
-    //
+    @PostMapping("/payment/create/service")
+    public ResponseEntity<String> createServicePaymentMapping(@RequestBody String body){
+        JSONObject json = null;
+        ServicePayment payment = null;
+        try {
+            json = new JSONObject(new JSONTokener(body));
+            payment = paymentController.createServicePayment(json);
+        } catch (JSONException e){
+            return badRequestResponse("request was badly formatted");
+        }
+        JSONObject responseJson = null;
+        try {
+            paymentController.writePaymentToDB(payment);
+            Service service = serviceController.findServiceByID(payment.getServiceId());
+            if(service == null) return notFoundResponse();
+            responseJson = createServicePaymentResponseEntity(payment, service);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse("unable to make a payment");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse("unable to make a payment");
+        }
+        return ResponseEntity.ok(createResponse("success", "created the service payment")
+                .put("entity", responseJson).toString());
+    }
+
+    @PostMapping("/payment/create/job")
+    public ResponseEntity<String> createJobPaymentMapping(@RequestBody String body){
+        JSONObject json = null;
+        JobPayment payment = null;
+        try {
+            json = new JSONObject(new JSONTokener(body));
+            payment = paymentController.createJobPayment(json);
+        } catch (JSONException e){
+            return badRequestResponse("request was badly formatted");
+        }
+        JSONObject responseJson = null;
+        try {
+            paymentController.writePaymentToDB(payment);
+            JobListing job = jobController.findJobByID(payment.getJobId());
+            if(job == null) return notFoundResponse();
+            responseJson = createJobPaymentResponseEntity(payment, job);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse("unable to make a payment");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse("unable to make a payment");
+        }
+        return ResponseEntity.ok(createResponse("success", "created the job payment")
+                .put("entity", responseJson).toString());
+    }
+
 
     private JSONObject createServicePaymentResponseEntity(ServicePayment payment, Service service){
         JSONObject serviceJson = service.parseJson();
@@ -164,11 +181,11 @@ public class PaymentRestController extends RestControllerBase {
         return paymentJson;
     }
 
-    // private JSONObject createJobPaymentResponseEntity(JobPayment payment, Job job){
-    //     JSONObject jobJson = job.parseJson();
-    //     JSONObject paymentJson = payment.parseJson();
-    //     paymentJson.put("paying_for", jobJson);
-    //     return paymentJson;
-    // }
+    private JSONObject createJobPaymentResponseEntity(JobPayment payment, JobListing job){
+        JSONObject jobJson = job.parseJson();
+        JSONObject paymentJson = payment.parseJson();
+        paymentJson.put("paying_for", jobJson);
+        return paymentJson;
+    }
 
 }

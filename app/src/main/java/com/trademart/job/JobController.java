@@ -36,7 +36,7 @@ public class JobController {
     }
 
 
-    public JobListing findJobById(int id) throws InterruptedException, SQLException{
+    public JobListing findJobByID(int id) throws InterruptedException, SQLException{
         sharedResource.lock();
 
         String command = "select * from job_listings where job_id=?";
@@ -96,6 +96,7 @@ public class JobController {
         prep.setString(5, job.getCategory().toString());
         prep.setTimestamp(6, Timestamp.valueOf(job.getDatePosted()));
         prep.setInt(7, job.getEmployerId());
+        prep.execute();
 
         sharedResource.unlock();
     }
@@ -118,6 +119,28 @@ public class JobController {
             .setCategory(JobCategory.parse(json.getString("job_category")))
             .setDatePosted(LocalDateTime.now())
             .build();
+    }
+
+    public ArrayList<Integer> getJobMediaIDs(int jobId) throws SQLException{
+        ArrayList<Integer> ids = new ArrayList<>();
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        DatabaseController db = sharedResource.getDatabaseController();
+        String command = "select job_media.media_id from job_media join media on media.media_id = job_media.media_id where job_media.job_id=? order by date_uploaded";
+        PreparedStatement prep = db.prepareStatement(command);
+        prep.setInt(1, jobId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            ids.add(rs.getInt("media_id"));
+        }
+        rs.close();
+        prep.close();
+        sharedResource.unlock();
+        return ids;
     }
 
 }

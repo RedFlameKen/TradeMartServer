@@ -425,4 +425,21 @@ public class MediaController {
         }
     }
 
+    public int insertJobMediaToDB(String filepath, int employerId, int jobId) throws SQLException, InterruptedException {
+        int mediaId = generateMediaID();
+        insertMediaToDB(filepath, mediaId, employerId);
+        sharedResource.lock();
+
+        DatabaseController db = sharedResource.getDatabaseController();
+        String command = "insert into job_media(media_id, job_id) values (?, ?)";
+        PreparedStatement prep = db.prepareStatement(command);
+        prep.setInt(1, mediaId);
+        prep.setInt(2, jobId);
+        prep.execute();
+        prep.close();
+
+        sharedResource.unlock();
+        return mediaId;
+    }
+
 }
