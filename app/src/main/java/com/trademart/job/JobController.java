@@ -50,6 +50,7 @@ public class JobController {
                 .setCategory(JobCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(rs.getInt("employer_id"))
+                .setLikes(rs.getInt("likes"))
                 .build());
         }
         sharedResource.unlock();
@@ -74,10 +75,21 @@ public class JobController {
                 .setCategory(JobCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(rs.getInt("employer_id"))
+                .setLikes(rs.getInt("likes"))
                 .build();
         }
         sharedResource.unlock();
         return job;
+    }
+
+    public void likeJob(JobListing job) throws InterruptedException, SQLException{
+        String command = "update job_listings set likes=? where job_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, job.getLikes()+1);
+        prep.setInt(2, job.getId());
+        prep.execute();
+        sharedResource.unlock();
     }
 
     public ArrayList<JobListing> findJobsByEmployerId(int employerId) throws InterruptedException, SQLException{
@@ -98,6 +110,7 @@ public class JobController {
                 .setCategory(JobCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(employerId)
+                .setLikes(rs.getInt("likes"))
                 .build());
         }
         sharedResource.unlock();
@@ -107,15 +120,16 @@ public class JobController {
     public void writeJobToDb(JobListing job) throws SQLException, InterruptedException{
         sharedResource.lock();
 
-        String command = "insert into job_listings(job_id, job_title, job_description, amount, job_category, date_posted, employer_id)values(?,?,?,?,?,?,?)";
+        String command = "insert into job_listings(job_id, job_title, job_description, amount, job_category, likes, date_posted, employer_id)values(?,?,?,?,?,?,?)";
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, job.getId());
         prep.setString(2, job.getTitle());
         prep.setString(3, job.getDescription());
         prep.setDouble(4, job.getAmount());
-        prep.setString(5, job.getCategory().toString());
-        prep.setTimestamp(6, Timestamp.valueOf(job.getDatePosted()));
-        prep.setInt(7, job.getEmployerId());
+        prep.setInt(5, job.getLikes());
+        prep.setString(6, job.getCategory().toString());
+        prep.setTimestamp(7, Timestamp.valueOf(job.getDatePosted()));
+        prep.setInt(8, job.getEmployerId());
         prep.execute();
 
         sharedResource.unlock();

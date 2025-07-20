@@ -9,6 +9,7 @@ public class Service {
     private int serviceId;
     private String serviceTitle;
     private ServiceCategory serviceCategory;
+    private int likes;
     private String serviceDescription;
     private LocalDateTime datePosted;
     private double servicePrice;
@@ -19,6 +20,7 @@ public class Service {
         serviceId = builder.serviceId;
         serviceTitle = builder.serviceTitle;
         serviceCategory = builder.serviceCategory;
+        likes = builder.likes;
         serviceDescription = builder.serviceDescription;
         servicePrice = builder.servicePrice;
         serviceCurrency = builder.serviceCurrency;
@@ -58,6 +60,10 @@ public class Service {
         return ownerId;
     }
 
+    public int getLikes() {
+        return likes;
+    }
+
     public JSONObject parseJson(){
         return new JSONObject()
             .put("service_id", serviceId)
@@ -74,6 +80,7 @@ public class Service {
 
         private int serviceId;
         private String serviceTitle;
+        private int likes;
         private ServiceCategory serviceCategory;
         private String serviceDescription;
         private LocalDateTime datePosted;
@@ -84,6 +91,7 @@ public class Service {
         public ServiceBuilder(){
             serviceId = ownerId = -1;
             serviceTitle = serviceDescription = "";
+            likes = 0;
             serviceCurrency = "PHP";
             serviceCategory = ServiceCategory.NONE;
             servicePrice = 0;
@@ -128,6 +136,11 @@ public class Service {
         public ServiceBuilder setServiceCurrency(String serviceCurrency) {
             if(serviceCurrency != null)
                 this.serviceCurrency = serviceCurrency;
+            return this;
+        }
+
+        public ServiceBuilder setLikes(int likes) {
+            this.likes = likes;
             return this;
         }
 

@@ -87,6 +87,95 @@ public class FeedRestController extends RestControllerBase {
                 .put("data", data).toString());
     }
 
+    @PostMapping("/feed/like")
+    public ResponseEntity<String> likeFeedMapping(@RequestBody String body){
+        JSONObject json;
+        FeedItem feedItem;
+        int userId;
+        try {
+            json = new JSONObject(new JSONTokener(body));
+            userId = json.getInt("user_id");
+            JSONObject feedJson = json.getJSONObject("data");
+            feedItem = new FeedItem.Builder()
+                .setId(feedJson.getInt("id"))
+                // .setOwnerId(feedJson.getInt("owner_id"))
+                .setType(FeedType.parse(feedJson.getString("type")))
+                .build();
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return badRequestResponse("received a bad request");
+        }
+        FeedItem updated = null;
+        try {
+            switch (feedItem.getType()) {
+                case JOB_LISTING:
+                    updated = likeJobListing(userId, feedItem.getId());
+                    break;
+                case POST:
+                    updated = likePost(userId, feedItem.getId());
+                    break;
+                case SERVICE:
+                    updated = likeService(userId, feedItem.getId());
+                    break;
+                default:
+                    break;
+            }
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "feed liked")
+                .put("data", new JSONObject()
+                    .put("feed_updated", updated.parseJSON()))
+                .toString());
+    }
+
+    private FeedItem likePost(int userId, int postId) throws InterruptedException, SQLException{
+        User user = userController.getUserFromDB(userId);
+        Post post = postController.findPostByID(postId);
+        postController.likePost(post);
+        return new FeedItem.Builder()
+            .setId(post.getPostId())
+            .setUsername(user.getUsername())
+            .setOwnerId(user.getId())
+            .setTitle(post.getTitle())
+            .setLikes(post.getLikes()+1)
+            .setType(FeedType.SERVICE)
+            .build();
+    }
+
+    private FeedItem likeService(int userId, int serviceId) throws InterruptedException, SQLException{
+        User user = userController.getUserFromDB(userId);
+        Service service = serviceController.findServiceByID(serviceId);
+        serviceController.likeService(service);
+        return new FeedItem.Builder()
+            .setId(service.getServiceId())
+            .setUsername(user.getUsername())
+            .setOwnerId(user.getId())
+            .setTitle(service.getServiceTitle())
+            .setLikes(service.getLikes()+1)
+            .setType(FeedType.SERVICE)
+            .build();
+    }
+
+    private FeedItem likeJobListing(int userId, int jobId) throws InterruptedException, SQLException{
+        User user = userController.getUserFromDB(userId);
+        JobListing job = jobController.findJobByID(jobId);
+        jobController.likeJob(job);
+        return new FeedItem.Builder()
+            .setId(job.getId())
+            .setUsername(user.getUsername())
+            .setOwnerId(user.getId())
+            .setTitle(job.getTitle())
+            .setLikes(job.getLikes()+1)
+            .setType(FeedType.JOB_LISTING)
+            .build();
+    }
+
     private ArrayList<FeedItem> generateFeeds(ArrayList<FeedItem> loadedFeeds) throws InterruptedException, SQLException{
         ArrayList<FeedItem> feeds = new ArrayList<>();
         ArrayList<Post> posts = postController.getAllPostsFromDB();

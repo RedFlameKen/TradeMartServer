@@ -55,12 +55,23 @@ public class ServiceController {
                 .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
+                .setLikes(rs.getInt("likes"))
                 .build();
         } catch (SQLException e) {
             e.printStackTrace();
         }
         sharedResource.unlock();
         return service;
+    }
+
+    public void likeService(Service service) throws InterruptedException, SQLException{
+        String command = "update services set likes=? where service_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, service.getLikes()+1);
+        prep.setInt(2, service.getServiceId());
+        prep.execute();
+        sharedResource.unlock();
     }
 
     public ArrayList<Service> findServicesByUserId(int userId) throws InterruptedException, SQLException{
@@ -78,6 +89,7 @@ public class ServiceController {
                 .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
+                .setLikes(rs.getInt("likes"))
                 .build();
             services.add(service);
         }
@@ -98,6 +110,7 @@ public class ServiceController {
                 .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
+                .setLikes(rs.getInt("likes"))
                 .build();
             services.add(service);
         }
@@ -106,7 +119,7 @@ public class ServiceController {
     }
 
     public void writeServiceToDB(Service service) throws SQLException, InterruptedException {
-        String command = "insert into services(service_id,service_title,service_category,service_description,service_price,service_currency,date_posted, owner_id) values (?,?,?,?,?,?,?,?)";
+        String command = "insert into services(service_id,service_title,service_category,service_description,likes,service_price,service_currency,date_posted, owner_id) values (?,?,?,?,?,?,?,?,?)";
         sharedResource.lock();
 
         PreparedStatement prep = dbController.prepareStatement(command);
@@ -115,10 +128,11 @@ public class ServiceController {
         prep.setString(2, service.getServiceTitle());
         prep.setString(3, service.getServiceCategory().toString());
         prep.setString(4, service.getServiceDescription());
-        prep.setDouble(5, service.getServicePrice());
-        prep.setString(6, service.getServiceCurrency());
-        prep.setTimestamp(7, Timestamp.valueOf(service.getDatePosted()));
-        prep.setInt(8, service.getOwnerId());
+        prep.setInt(5, service.getLikes());
+        prep.setDouble(6, service.getServicePrice());
+        prep.setString(7, service.getServiceCurrency());
+        prep.setTimestamp(8, Timestamp.valueOf(service.getDatePosted()));
+        prep.setInt(9, service.getOwnerId());
         prep.execute();
 
         sharedResource.unlock();

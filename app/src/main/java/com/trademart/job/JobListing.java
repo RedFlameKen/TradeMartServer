@@ -10,6 +10,7 @@ public class JobListing {
     private String title;
     private String description;
     private double amount;
+    private int likes;
     private JobCategory category;
     private LocalDateTime datePosted;
     private int employerId;
@@ -18,6 +19,7 @@ public class JobListing {
     public JobListing(Builder builder) {
         this.id = builder.id;
         this.title = builder.title;
+        this.likes = builder.likes;
         this.description = builder.description;
         this.amount = builder.amount;
         this.category = builder.category;
@@ -54,6 +56,9 @@ public class JobListing {
         return datePosted;
     }
 
+    public int getLikes() {
+        return likes;
+    }
 
     public int getEmployerId() {
         return employerId;
@@ -76,6 +81,7 @@ public class JobListing {
         private String title;
         private String description;
         private double amount;
+        private int likes;
         private JobCategory category;
         private LocalDateTime datePosted;
         private int employerId;
@@ -83,6 +89,7 @@ public class JobListing {
         public Builder(){
             id = employerId = -1;
             amount = 0;
+            likes = 0;
             description = "";
             title = null;
             category = null;
@@ -111,6 +118,11 @@ public class JobListing {
 
         public Builder setCategory(JobCategory category) {
             this.category = category;
+            return this;
+        }
+
+        public Builder setLikes(int likes) {
+            this.likes = likes;
             return this;
         }
 

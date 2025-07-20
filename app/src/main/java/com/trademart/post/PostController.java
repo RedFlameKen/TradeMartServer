@@ -74,6 +74,16 @@ public class PostController {
         return id;
     }
 
+    public void likePost(Post post) throws InterruptedException, SQLException{
+        String command = "update posts set likes=? where post_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, post.getLikes()+1);
+        prep.setInt(2, post.getPostId());
+        prep.execute();
+        sharedResource.unlock();
+    }
+
     public ArrayList<Post> getAllPostsFromDB() throws InterruptedException, SQLException{
         ArrayList<Post> posts = new ArrayList<>();
         sharedResource.lock();
