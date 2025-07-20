@@ -81,6 +81,24 @@ create table if not exists job_listings (
     foreign key(employer_id) references users(user_id)
 );
 
+create table if not exists post_categories (
+    post_id int,
+    category varchar(255),
+    foreign key(post_id) references posts(post_id)
+);
+
+create table if not exists service_categories (
+    service_id int,
+    category varchar(255),
+    foreign key(service_id) references services(service_id)
+);
+
+create table if not exists job_categories (
+    job_id int,
+    category varchar(255),
+    foreign key(job_id) references job_listings(job_id)
+);
+
 create table if not exists post_likes (
     user_id int,
     post_id int,
