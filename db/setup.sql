@@ -225,6 +225,15 @@ create table if not exists report_contents (
     report_type varchar(255)
 );
 
+create table if not exists reports(
+    report_id int primary key,
+    message varchar(1024),
+    type varchar(255),
+    user_id int,
+    target_id int,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
 create table if not exists followers (
     followed_user_id int,
     follower_user_id int,
