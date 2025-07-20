@@ -35,6 +35,26 @@ public class JobController {
         return id;
     }
 
+    public ArrayList<JobListing> getAllJobListingsFromDB() throws InterruptedException, SQLException{
+        ArrayList<JobListing> jobs = new ArrayList<>();
+        String command = "select * from job_listings";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            jobs.add(new JobListing.Builder()
+                .setId(rs.getInt("job_id"))
+                .setTitle(rs.getString("job_title"))
+                .setDescription(rs.getString("job_description"))
+                .setAmount(rs.getDouble("amount"))
+                .setCategory(JobCategory.parse(rs.getString("job_category")))
+                .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
+                .setEmployerId(rs.getInt("employer_id"))
+                .build());
+        }
+        sharedResource.unlock();
+        return jobs;
+    }
 
     public JobListing findJobByID(int id) throws InterruptedException, SQLException{
         sharedResource.lock();

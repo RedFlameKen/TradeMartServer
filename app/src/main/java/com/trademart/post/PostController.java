@@ -14,9 +14,11 @@ import com.trademart.util.Logger.LogLevel;
 public class PostController {
 
     private SharedResource sharedResource;
+    private DatabaseController dbController;
 
     public PostController(SharedResource sharedResource) {
         this.sharedResource = sharedResource;
+        dbController = sharedResource.getDatabaseController();
     }
 
     public void insertPostToDB(Post post) throws SQLException{
@@ -70,6 +72,25 @@ public class PostController {
         int id = IDGenerator.generateDBID(sharedResource.getDatabaseController(), "posts", "post_id");
         sharedResource.unlock();
         return id;
+    }
+
+    public ArrayList<Post> getAllPostsFromDB() throws InterruptedException, SQLException{
+        ArrayList<Post> posts = new ArrayList<>();
+        sharedResource.lock();
+        String command = "select * from posts";
+        PreparedStatement prep = dbController.prepareStatement(command);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            posts.add(new Post.PostBuilder()
+                    .setPostId(rs.getInt("post_id"))
+                    .setUserId(rs.getInt("user_id"))
+                    .setTitle(rs.getString("title"))
+                    .setDescription(rs.getString("description"))
+                    .setLikes(rs.getInt("likes"))
+                    .build());
+        }
+        sharedResource.unlock();
+        return posts;
     }
 
     public Post findPostByID(int postId) {

@@ -5,6 +5,7 @@ import static com.trademart.util.Logger.LogLevel.WARNING;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
@@ -49,6 +50,27 @@ public class UserController {
         }
         sharedResource.unlock();
         return user;
+    }
+
+    public ArrayList<User> getAllUsersFromDB() throws InterruptedException, SQLException{
+        ArrayList<User> users = new ArrayList<>();
+        String command = "select * from users";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            users.add(new UserBuilder()
+                .setId(rs.getInt("user_id"))
+                .setUsername(rs.getString("username"))
+                .setEmail(rs.getString("email"))
+                .setPassword(rs.getString("password"))
+                .setPasswordSalt(rs.getString("password_salt"))
+                .setVerified(rs.getBoolean("verified"))
+                .setProfilePicturePath(rs.getString("profile_picture_path"))
+                .build());
+        }
+        sharedResource.unlock();
+        return users;
     }
 
     public User getUserFromDB(int userID) {

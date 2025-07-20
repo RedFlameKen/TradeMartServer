@@ -85,26 +85,23 @@ public class ServiceController {
         return services;
     }
 
-    public ArrayList<Service> getAllServices(){
+    public ArrayList<Service> getAllServices() throws InterruptedException, SQLException{
+        sharedResource.lock();
         ArrayList<Service> services = new ArrayList<>();
         String command = "select * from services";
-        try {
-            ResultSet rs = dbController.execQuery(command);
-            while(rs.next()){
-                Service service = new Service.ServiceBuilder()
-                    .setServiceId(rs.getInt("service_id"))
-                    .setServiceTitle(rs.getString("service_title"))
-                    .setServiceDescription(rs.getString("service_description"))
-                    .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
-                    .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
-                    .setOwnerId(rs.getInt("owner_id"))
-                    .build();
-                services.add(service);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
+        ResultSet rs = dbController.execQuery(command);
+        while(rs.next()){
+            Service service = new Service.ServiceBuilder()
+                .setServiceId(rs.getInt("service_id"))
+                .setServiceTitle(rs.getString("service_title"))
+                .setServiceDescription(rs.getString("service_description"))
+                .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
+                .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
+                .setOwnerId(rs.getInt("owner_id"))
+                .build();
+            services.add(service);
         }
+        sharedResource.unlock();
         return services;
     }
 

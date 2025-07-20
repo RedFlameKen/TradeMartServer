@@ -17,6 +17,11 @@ public class RestControllerBase {
         return ResponseEntity.internalServerError().body(createResponse("failed", message).toString());
     }
 
+    protected ResponseEntity<String> internalServerErrorResponse(){
+        return ResponseEntity.internalServerError().body(createResponse("failed", "an internal server error occured").toString());
+    }
+
+
     protected ResponseEntity<String> badRequestResponse(String message){
         return ResponseEntity.badRequest().body(createResponse("failed", message).toString());
     }
