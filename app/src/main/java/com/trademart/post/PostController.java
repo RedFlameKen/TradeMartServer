@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
 import com.trademart.db.IDGenerator;
+import com.trademart.feed.FeedCategory;
 import com.trademart.util.Logger;
 import com.trademart.util.Logger.LogLevel;
 
@@ -29,17 +30,31 @@ public class PostController {
         }
 
         DatabaseController db = sharedResource.getDatabaseController();
-        PreparedStatement prep = db.prepareStatement("insert into posts (post_id, user_id, title, description, post_category, likes) values (?, ?, ?, ?, ?, ?)");
+        PreparedStatement prep = db.prepareStatement("insert into posts (post_id, user_id, title, description, likes) values (?, ?, ?, ?, ?)");
         prep.setInt(1, post.getPostId());
         prep.setInt(2, post.getUserId());
         prep.setString(3, post.getTitle());
         prep.setString(4, post.getDescription());
-        prep.setString(5, post.getPostCategory().toString());
-        prep.setInt(6, post.getLikes());
+        prep.setInt(5, post.getLikes());
 
         prep.execute();
 
         sharedResource.unlock();
+    }
+
+    public ArrayList<FeedCategory> getCategoriesById(int postId) throws SQLException, InterruptedException{
+        ArrayList<FeedCategory> categories = new ArrayList<>();
+        String command = "select * from post_categories where post_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, postId);
+        ResultSet rs = prep.executeQuery();
+        while (rs.next()) {
+            categories.add(FeedCategory.parse(rs.getString("category")));
+        }
+        prep.close();
+        sharedResource.unlock();
+        return categories;
     }
     
     public ArrayList<Integer> getPostMediaIDs(int postId) throws SQLException{

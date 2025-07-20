@@ -239,18 +239,20 @@ public class FeedRestController extends RestControllerBase {
         return categories.get(select);
     }
 
-    private FeedItem decideServiceFeed(ArrayList<Service> services, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException{
+    private FeedItem decideServiceFeed(ArrayList<Service> services, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException, InterruptedException{
         Service selected;
+        ArrayList<FeedCategory> categories;
         int hesitation = 0;
         do{
             int rand = randomNumber(0, services.size());
             selected = services.get(rand);
+            categories = serviceController.getCategoriesById(selected.getServiceId());
             hesitation++;
             if(hesitation == HESITATION_LIMIT){
                 break;
             }
         } while (isLoaded(selected.getServiceId(), FeedType.SERVICE, loadedFeeds) ||
-                !categoryFilterPasses(selected.getServiceCategory(), categoryFilter));
+                !categoryFilterPasses(categories, categoryFilter));
         User user = userController.getUserFromDB(selected.getOwnerId());
         return new FeedItem.Builder()
             .setId(selected.getServiceId())
@@ -262,18 +264,20 @@ public class FeedRestController extends RestControllerBase {
             .build();
     }
 
-    private FeedItem decideJobListingFeed(ArrayList<JobListing> jobs, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException{
+    private FeedItem decideJobListingFeed(ArrayList<JobListing> jobs, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException, InterruptedException{
         JobListing selected;
+        ArrayList<FeedCategory> categories;
         int hesitation = 0;
         do{
             int rand = randomNumber(0, jobs.size());
             selected = jobs.get(rand);
+            categories = jobController.getCategoriesById(selected.getId());
             hesitation++;
             if(hesitation == HESITATION_LIMIT){
                 break;
             }
         } while(isLoaded(selected.getId(), FeedType.JOB_LISTING, loadedFeeds) ||
-                !categoryFilterPasses(selected.getCategory(), categoryFilter));
+                !categoryFilterPasses(categories, categoryFilter));
         User user = userController.getUserFromDB(selected.getEmployerId());
         return new FeedItem.Builder()
             .setId(selected.getId())
@@ -285,18 +289,20 @@ public class FeedRestController extends RestControllerBase {
             .build();
     }
 
-    private FeedItem decidePostFeed(ArrayList<Post> posts, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException{
+    private FeedItem decidePostFeed(ArrayList<Post> posts, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException, InterruptedException{
         Post selected;
+        ArrayList<FeedCategory> categories;
         int hesitation = 0;
         do{
             int rand = randomNumber(0, posts.size());
             selected = posts.get(rand);
+            categories = jobController.getCategoriesById(selected.getPostId());
             hesitation++;
             if(hesitation == HESITATION_LIMIT){
                 break;
             }
         } while(isLoaded(selected.getPostId(), FeedType.POST, loadedFeeds) ||
-                !categoryFilterPasses(selected.getPostCategory(), categoryFilter));
+                !categoryFilterPasses(categories, categoryFilter));
         User user = userController.getUserFromDB(selected.getUserId());
         return new FeedItem.Builder()
             .setId(selected.getPostId())
@@ -308,8 +314,8 @@ public class FeedRestController extends RestControllerBase {
             .build();
     }
 
-    private boolean categoryFilterPasses(FeedCategory category, FeedCategory categoryFilter){
-        if(categoryFilter == FeedCategory.NONE || category == categoryFilter){
+    private boolean categoryFilterPasses(ArrayList<FeedCategory> categories, FeedCategory categoryFilter){
+        if(categoryFilter == FeedCategory.NONE || categories.contains(categoryFilter)){
             return true;
         }
         return false;

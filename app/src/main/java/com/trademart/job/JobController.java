@@ -48,7 +48,6 @@ public class JobController {
                 .setTitle(rs.getString("job_title"))
                 .setDescription(rs.getString("job_description"))
                 .setAmount(rs.getDouble("amount"))
-                .setCategory(FeedCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(rs.getInt("employer_id"))
                 .setLikes(rs.getInt("likes"))
@@ -57,6 +56,22 @@ public class JobController {
         sharedResource.unlock();
         return jobs;
     }
+
+    public ArrayList<FeedCategory> getCategoriesById(int jobId) throws SQLException, InterruptedException{
+        ArrayList<FeedCategory> categories = new ArrayList<>();
+        String command = "select * from job_categories where job_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, jobId);
+        ResultSet rs = prep.executeQuery();
+        while (rs.next()) {
+            categories.add(FeedCategory.parse(rs.getString("category")));
+        }
+        prep.close();
+        sharedResource.unlock();
+        return categories;
+    }
+
 
     public JobListing findJobByID(int id) throws InterruptedException, SQLException{
         sharedResource.lock();
@@ -73,7 +88,6 @@ public class JobController {
                 .setTitle(rs.getString("job_title"))
                 .setDescription(rs.getString("job_description"))
                 .setAmount(rs.getDouble("amount"))
-                .setCategory(FeedCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(rs.getInt("employer_id"))
                 .setLikes(rs.getInt("likes"))
@@ -137,7 +151,6 @@ public class JobController {
                 .setTitle(rs.getString("job_title"))
                 .setDescription(rs.getString("job_description"))
                 .setAmount(rs.getDouble("amount"))
-                .setCategory(FeedCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(employerId)
                 .setLikes(rs.getInt("likes"))
@@ -150,16 +163,15 @@ public class JobController {
     public void writeJobToDb(JobListing job) throws SQLException, InterruptedException{
         sharedResource.lock();
 
-        String command = "insert into job_listings(job_id, job_title, job_description, amount, job_category, likes, date_posted, employer_id)values(?,?,?,?,?,?,?)";
+        String command = "insert into job_listings(job_id, job_title, job_description, amount, likes, date_posted, employer_id)values(?,?,?,?,?,?)";
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, job.getId());
         prep.setString(2, job.getTitle());
         prep.setString(3, job.getDescription());
         prep.setDouble(4, job.getAmount());
         prep.setInt(5, job.getLikes());
-        prep.setString(6, job.getCategory().toString());
-        prep.setTimestamp(7, Timestamp.valueOf(job.getDatePosted()));
-        prep.setInt(8, job.getEmployerId());
+        prep.setTimestamp(6, Timestamp.valueOf(job.getDatePosted()));
+        prep.setInt(7, job.getEmployerId());
         prep.execute();
 
         sharedResource.unlock();
@@ -180,7 +192,6 @@ public class JobController {
             .setTitle(json.getString("job_title"))
             .setDescription(json.getString("job_description"))
             .setAmount(json.getDouble("amount"))
-            .setCategory(FeedCategory.parse(json.getString("job_category")))
             .setDatePosted(LocalDateTime.now())
             .build();
     }

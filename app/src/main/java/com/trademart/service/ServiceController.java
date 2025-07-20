@@ -53,7 +53,6 @@ public class ServiceController {
                 .setServiceId(rs.getInt("service_id"))
                 .setServiceTitle(rs.getString("service_title"))
                 .setServiceDescription(rs.getString("service_description"))
-                .setServiceCategory(FeedCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
                 .setLikes(rs.getInt("likes"))
@@ -63,6 +62,21 @@ public class ServiceController {
         }
         sharedResource.unlock();
         return service;
+    }
+
+    public ArrayList<FeedCategory> getCategoriesById(int serviceId) throws SQLException, InterruptedException{
+        ArrayList<FeedCategory> categories = new ArrayList<>();
+        String command = "select * from service_categories where service_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, serviceId);
+        ResultSet rs = prep.executeQuery();
+        while (rs.next()) {
+            categories.add(FeedCategory.parse(rs.getString("category")));
+        }
+        prep.close();
+        sharedResource.unlock();
+        return categories;
     }
 
     public void likeService(Service service, int likerId) throws InterruptedException, SQLException{
@@ -116,7 +130,6 @@ public class ServiceController {
                 .setServiceId(rs.getInt("service_id"))
                 .setServiceTitle(rs.getString("service_title"))
                 .setServiceDescription(rs.getString("service_description"))
-                .setServiceCategory(FeedCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
                 .setLikes(rs.getInt("likes"))
@@ -137,7 +150,6 @@ public class ServiceController {
                 .setServiceId(rs.getInt("service_id"))
                 .setServiceTitle(rs.getString("service_title"))
                 .setServiceDescription(rs.getString("service_description"))
-                .setServiceCategory(FeedCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
                 .setLikes(rs.getInt("likes"))
@@ -149,20 +161,19 @@ public class ServiceController {
     }
 
     public void writeServiceToDB(Service service) throws SQLException, InterruptedException {
-        String command = "insert into services(service_id,service_title,service_category,service_description,likes,service_price,service_currency,date_posted, owner_id) values (?,?,?,?,?,?,?,?,?)";
+        String command = "insert into services(service_id,service_title,service_description,likes,service_price,service_currency,date_posted, owner_id) values (?,?,?,?,?,?,?,?)";
         sharedResource.lock();
 
         PreparedStatement prep = dbController.prepareStatement(command);
 
         prep.setInt(1, service.getServiceId());
         prep.setString(2, service.getServiceTitle());
-        prep.setString(3, service.getServiceCategory().toString());
-        prep.setString(4, service.getServiceDescription());
-        prep.setInt(5, service.getLikes());
-        prep.setDouble(6, service.getServicePrice());
-        prep.setString(7, service.getServiceCurrency());
-        prep.setTimestamp(8, Timestamp.valueOf(service.getDatePosted()));
-        prep.setInt(9, service.getOwnerId());
+        prep.setString(3, service.getServiceDescription());
+        prep.setInt(4, service.getLikes());
+        prep.setDouble(5, service.getServicePrice());
+        prep.setString(6, service.getServiceCurrency());
+        prep.setTimestamp(7, Timestamp.valueOf(service.getDatePosted()));
+        prep.setInt(8, service.getOwnerId());
         prep.execute();
 
         sharedResource.unlock();
