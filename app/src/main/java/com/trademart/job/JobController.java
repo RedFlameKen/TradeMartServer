@@ -83,7 +83,10 @@ public class JobController {
         return job;
     }
 
-    public void likeJob(JobListing job) throws InterruptedException, SQLException{
+    public void likeJob(JobListing job, int likerId) throws InterruptedException, SQLException{
+        if(userHasLiked(likerId, job.getId())){
+            return;
+        }
         String command = "update job_listings set likes=? where job_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
@@ -91,6 +94,32 @@ public class JobController {
         prep.setInt(2, job.getId());
         prep.execute();
         sharedResource.unlock();
+        registerUserLike(job.getId(), likerId);
+    }
+
+    public void registerUserLike(int jobId, int userId) throws SQLException, InterruptedException{
+        String command = "insert into job_likes(user_id, job_id)values(?,?)";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setInt(2, jobId);
+        prep.execute();
+        sharedResource.unlock();
+    }
+
+    public boolean userHasLiked(int userId, int jobId) throws SQLException, InterruptedException{
+        String command = "select * from job_likes where user_id=? and job_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setInt(2, jobId);
+        ResultSet rs = prep.executeQuery();
+        boolean result = false;
+        if(rs.next()){
+            result = true;
+        }
+        sharedResource.unlock();
+        return result;
     }
 
     public ArrayList<JobListing> findJobsByEmployerId(int employerId) throws InterruptedException, SQLException{

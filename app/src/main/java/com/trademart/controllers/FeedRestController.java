@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
+import com.trademart.feed.FeedCategory;
 import com.trademart.feed.FeedItem;
 import com.trademart.feed.FeedType;
 import com.trademart.job.JobController;
@@ -24,11 +25,14 @@ import com.trademart.service.Service;
 import com.trademart.service.ServiceController;
 import com.trademart.user.User;
 import com.trademart.user.UserController;
+import com.trademart.user.UserPreferences;
 
 @RestController
 public class FeedRestController extends RestControllerBase {
 
     public static final int FEED_SEND_COUNT = 10;
+    public static final int ALGO_PREFERRED_CATEGORY_MODIFIER = 5;
+    public static final int HESITATION_LIMIT = 10;
 
     private SharedResource sharedResource;
     private UserController userController;
@@ -51,8 +55,10 @@ public class FeedRestController extends RestControllerBase {
     public ResponseEntity<String> serveFeedDetailsMapping(@RequestBody String body){
         JSONObject json;
         ArrayList<FeedItem> loadedFeeds = new ArrayList<>();
+        int userId = -1;
         try {
             json = new JSONObject(new JSONTokener(body));
+            userId = json.getInt("user_id");
             JSONArray feeds = json.getJSONArray("loaded_feeds");
             for (int i = 0; i < feeds.length(); i++) {
                 JSONObject feed = feeds.getJSONObject(i);
@@ -71,7 +77,7 @@ public class FeedRestController extends RestControllerBase {
         }
         JSONObject data = new JSONObject();
         try {
-            ArrayList<FeedItem> feeds = generateFeeds(loadedFeeds);
+            ArrayList<FeedItem> feeds = generateFeeds(loadedFeeds, userId);
             for (FeedItem feedItem : feeds) {
                 data.append("feeds", feedItem.parseJSON());
             }
@@ -137,7 +143,7 @@ public class FeedRestController extends RestControllerBase {
     private FeedItem likePost(int userId, int postId) throws InterruptedException, SQLException{
         User user = userController.getUserFromDB(userId);
         Post post = postController.findPostByID(postId);
-        postController.likePost(post);
+        postController.likePost(post, userId);
         return new FeedItem.Builder()
             .setId(post.getPostId())
             .setUsername(user.getUsername())
@@ -151,7 +157,7 @@ public class FeedRestController extends RestControllerBase {
     private FeedItem likeService(int userId, int serviceId) throws InterruptedException, SQLException{
         User user = userController.getUserFromDB(userId);
         Service service = serviceController.findServiceByID(serviceId);
-        serviceController.likeService(service);
+        serviceController.likeService(service, userId);
         return new FeedItem.Builder()
             .setId(service.getServiceId())
             .setUsername(user.getUsername())
@@ -165,7 +171,7 @@ public class FeedRestController extends RestControllerBase {
     private FeedItem likeJobListing(int userId, int jobId) throws InterruptedException, SQLException{
         User user = userController.getUserFromDB(userId);
         JobListing job = jobController.findJobByID(jobId);
-        jobController.likeJob(job);
+        jobController.likeJob(job, userId);
         return new FeedItem.Builder()
             .setId(job.getId())
             .setUsername(user.getUsername())
@@ -176,36 +182,75 @@ public class FeedRestController extends RestControllerBase {
             .build();
     }
 
-    private ArrayList<FeedItem> generateFeeds(ArrayList<FeedItem> loadedFeeds) throws InterruptedException, SQLException{
+    private ArrayList<FeedItem> generateFeeds(ArrayList<FeedItem> loadedFeeds, int userId) throws InterruptedException, SQLException{
         ArrayList<FeedItem> feeds = new ArrayList<>();
         ArrayList<Post> posts = postController.getAllPostsFromDB();
         ArrayList<Service> services = serviceController.getAllServices();
         ArrayList<JobListing> jobs = jobController.getAllJobListingsFromDB();
 
         for (int i = 0; i < FEED_SEND_COUNT; i++) {
-            switch (decideFeedType()) {
-                case JOB_LISTING:
-                    feeds.add(decideJobListingFeed(jobs, loadedFeeds));
+            FeedItem item = null;
+            FeedCategory categoryFilter = decideCategory(userId);
+            do {
+                switch (decideFeedType()) {
+                    case JOB_LISTING:
+                        item = decideJobListingFeed(jobs, loadedFeeds, categoryFilter);
+                        break;
+                    case POST:
+                        item = decidePostFeed(posts, loadedFeeds, categoryFilter);
+                        break;
+                    case SERVICE:
+                        item = decideServiceFeed(services, loadedFeeds, categoryFilter);
+                        break;
+                    default:
+                        break;
+                }
+                if(i==0){
+                    feeds.add(item);
                     break;
-                case POST:
-                    feeds.add(decidePostFeed(posts, loadedFeeds));
-                    break;
-                case SERVICE:
-                    feeds.add(decideServiceFeed(services, loadedFeeds));
-                    break;
-                default:
-                    break;
-            }
+                }
+            } while(hasId(feeds, item.getId()));
+            feeds.add(item);
         }
         return feeds;
     }
 
-    private FeedItem decideServiceFeed(ArrayList<Service> services, ArrayList<FeedItem> loadedFeeds) throws SQLException{
+    private boolean hasId(ArrayList<FeedItem> feeds, int id){
+        for (FeedItem feedItem : feeds)
+            if(feedItem.getId() == id)
+                return true;
+        return false;
+    }
+
+    private FeedCategory decideCategory(int userId) throws InterruptedException, SQLException{
+        UserPreferences pref = userController.getUserPreferences(userId);
+        FeedCategory preferredCategory = pref.getPreferredCategory();
+        if(preferredCategory == FeedCategory.NONE){
+            return FeedCategory.NONE;
+        }
+        ArrayList<FeedCategory> categories = new ArrayList<>();
+        for (int i = 0; i < ALGO_PREFERRED_CATEGORY_MODIFIER; i++) {
+            categories.add(preferredCategory);
+        }
+        for(FeedCategory cat : FeedCategory.values()){
+            categories.add(cat);
+        }
+        int select = randomNumber(0, categories.size());
+        return categories.get(select);
+    }
+
+    private FeedItem decideServiceFeed(ArrayList<Service> services, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException{
         Service selected;
+        int hesitation = 0;
         do{
             int rand = randomNumber(0, services.size());
             selected = services.get(rand);
-        } while(isLoaded(selected.getServiceId(), FeedType.SERVICE, loadedFeeds));
+            hesitation++;
+            if(hesitation == HESITATION_LIMIT){
+                break;
+            }
+        } while (isLoaded(selected.getServiceId(), FeedType.SERVICE, loadedFeeds) ||
+                !categoryFilterPasses(selected.getServiceCategory(), categoryFilter));
         User user = userController.getUserFromDB(selected.getOwnerId());
         return new FeedItem.Builder()
             .setId(selected.getServiceId())
@@ -217,12 +262,18 @@ public class FeedRestController extends RestControllerBase {
             .build();
     }
 
-    private FeedItem decideJobListingFeed(ArrayList<JobListing> jobs, ArrayList<FeedItem> loadedFeeds) throws SQLException{
+    private FeedItem decideJobListingFeed(ArrayList<JobListing> jobs, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException{
         JobListing selected;
+        int hesitation = 0;
         do{
             int rand = randomNumber(0, jobs.size());
             selected = jobs.get(rand);
-        } while(isLoaded(selected.getId(), FeedType.JOB_LISTING, loadedFeeds));
+            hesitation++;
+            if(hesitation == HESITATION_LIMIT){
+                break;
+            }
+        } while(isLoaded(selected.getId(), FeedType.JOB_LISTING, loadedFeeds) ||
+                !categoryFilterPasses(selected.getCategory(), categoryFilter));
         User user = userController.getUserFromDB(selected.getEmployerId());
         return new FeedItem.Builder()
             .setId(selected.getId())
@@ -234,12 +285,18 @@ public class FeedRestController extends RestControllerBase {
             .build();
     }
 
-    private FeedItem decidePostFeed(ArrayList<Post> posts, ArrayList<FeedItem> loadedFeeds) throws SQLException{
+    private FeedItem decidePostFeed(ArrayList<Post> posts, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException{
         Post selected;
+        int hesitation = 0;
         do{
             int rand = randomNumber(0, posts.size());
             selected = posts.get(rand);
-        } while(isLoaded(selected.getPostId(), FeedType.POST, loadedFeeds));
+            hesitation++;
+            if(hesitation == HESITATION_LIMIT){
+                break;
+            }
+        } while(isLoaded(selected.getPostId(), FeedType.POST, loadedFeeds) ||
+                !categoryFilterPasses(selected.getPostCategory(), categoryFilter));
         User user = userController.getUserFromDB(selected.getUserId());
         return new FeedItem.Builder()
             .setId(selected.getPostId())
@@ -249,6 +306,13 @@ public class FeedRestController extends RestControllerBase {
             .setType(FeedType.POST)
             .setMediaIds(postController.getPostMediaIDs(selected.getPostId()))
             .build();
+    }
+
+    private boolean categoryFilterPasses(FeedCategory category, FeedCategory categoryFilter){
+        if(categoryFilter == FeedCategory.NONE || category == categoryFilter){
+            return true;
+        }
+        return false;
     }
 
     private boolean isLoaded(int id, FeedType type, ArrayList<FeedItem> feeds){

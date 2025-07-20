@@ -75,7 +75,10 @@ public class PostController {
         return id;
     }
 
-    public void likePost(Post post) throws InterruptedException, SQLException{
+    public void likePost(Post post, int likerId) throws InterruptedException, SQLException{
+        if(userHasLiked(likerId, post.getPostId())){
+            return;
+        }
         String command = "update posts set likes=? where post_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
@@ -83,7 +86,48 @@ public class PostController {
         prep.setInt(2, post.getPostId());
         prep.execute();
         sharedResource.unlock();
+        registerUserLike(post.getPostId(), likerId);
     }
+
+    public void registerUserLike(int postId, int userId) throws SQLException, InterruptedException{
+        String command = "insert into post_likes(user_id, post_id)values(?,?)";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setInt(2, postId);
+        prep.execute();
+        sharedResource.unlock();
+
+    }
+
+    public boolean userHasLiked(int userId, int postId) throws SQLException, InterruptedException{
+        String command = "select * from post_likes where user_id=? and post_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setInt(2, postId);
+        ResultSet rs = prep.executeQuery();
+        boolean result = false;
+        if(rs.next()){
+            result = true;
+        }
+        sharedResource.unlock();
+        return result;
+    }
+
+    public ArrayList<Integer> getLikingUsersById(int postId) throws SQLException, InterruptedException{
+        ArrayList<Integer> ids = new ArrayList<>();
+        String command = "select * from post_likes where post_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, postId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            ids.add(rs.getInt("user_id"));
+        }
+        sharedResource.unlock();
+        return ids;
+   }
 
     public ArrayList<Post> getAllPostsFromDB() throws InterruptedException, SQLException{
         ArrayList<Post> posts = new ArrayList<>();

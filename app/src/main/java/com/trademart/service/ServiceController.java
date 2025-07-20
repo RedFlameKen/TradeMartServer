@@ -65,7 +65,10 @@ public class ServiceController {
         return service;
     }
 
-    public void likeService(Service service) throws InterruptedException, SQLException{
+    public void likeService(Service service, int likerId) throws InterruptedException, SQLException{
+        if(userHasLiked(likerId, service.getServiceId())){
+            return;
+        }
         String command = "update services set likes=? where service_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
@@ -73,6 +76,32 @@ public class ServiceController {
         prep.setInt(2, service.getServiceId());
         prep.execute();
         sharedResource.unlock();
+        registerUserLike(service.getServiceId(), likerId);
+    }
+
+    public void registerUserLike(int serviceId, int userId) throws SQLException, InterruptedException{
+        String command = "insert into service_likes(user_id, service_id)values(?,?)";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setInt(2, serviceId);
+        prep.execute();
+        sharedResource.unlock();
+    }
+
+    public boolean userHasLiked(int userId, int serviceId) throws SQLException, InterruptedException{
+        String command = "select * from service_likes where user_id=? and service_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setInt(2, serviceId);
+        ResultSet rs = prep.executeQuery();
+        boolean result = false;
+        if(rs.next()){
+            result = true;
+        }
+        sharedResource.unlock();
+        return result;
     }
 
     public ArrayList<Service> findServicesByUserId(int userId) throws InterruptedException, SQLException{
@@ -138,7 +167,6 @@ public class ServiceController {
 
         sharedResource.unlock();
     }
-
     public ArrayList<Integer> getServiceMediaIDs(int serviceId) throws SQLException{
         ArrayList<Integer> ids = new ArrayList<>();
         try {
