@@ -29,12 +29,13 @@ public class PostController {
         }
 
         DatabaseController db = sharedResource.getDatabaseController();
-        PreparedStatement prep = db.prepareStatement("insert into posts (post_id, user_id, title, description, likes) values (?, ?, ?, ?, ?)");
+        PreparedStatement prep = db.prepareStatement("insert into posts (post_id, user_id, title, description, post_category, likes) values (?, ?, ?, ?, ?, ?)");
         prep.setInt(1, post.getPostId());
         prep.setInt(2, post.getUserId());
         prep.setString(3, post.getTitle());
         prep.setString(4, post.getDescription());
-        prep.setInt(5, post.getLikes());
+        prep.setString(5, post.getPostCategory().toString());
+        prep.setInt(6, post.getLikes());
 
         prep.execute();
 

@@ -11,6 +11,7 @@ import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
 import com.trademart.encryption.Decryptor;
 import com.trademart.encryption.Hasher;
+import com.trademart.feed.FeedCategory;
 import com.trademart.user.User.UserBuilder;
 import com.trademart.util.Logger;
 
@@ -50,6 +51,21 @@ public class UserController {
         }
         sharedResource.unlock();
         return user;
+    }
+
+    public UserPreferences getUserPreferences(int userId) throws InterruptedException, SQLException{
+        UserPreferences preferences = null;
+        String command = "select * from user_preferences where user_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        ResultSet rs = prep.executeQuery();
+        if(rs.next()){
+            preferences = new UserPreferences(userId);
+            preferences.setPreferredCategory(FeedCategory.parse(rs.getString("preferred_category")));
+        }
+        sharedResource.unlock();
+        return preferences;
     }
 
     public ArrayList<User> getAllUsersFromDB() throws InterruptedException, SQLException{
@@ -170,10 +186,32 @@ public class UserController {
             prep.setBoolean(6, false);
             prep.execute();
             prep.close();
+
+            writeUserPreferencesToDb(user.getId());
         } catch (SQLException e) {
             Logger.log("Unable to insert user to db", WARNING);
         }
         sharedResource.unlock();
+    }
+
+    public void updateUserPreferences(UserPreferences preferences) throws SQLException, InterruptedException{
+        String command = "update user_preferences set preferred_category=? where user_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setString(1, preferences.getPreferredCategory().toString());
+        prep.setInt(2, preferences.getUserId());
+        prep.execute();
+        prep.close();
+        sharedResource.unlock();
+    }
+
+    private void writeUserPreferencesToDb(int userId) throws SQLException{
+        String command = "insert into user_preferences(user_id, preferred_category)values(?,?)";
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setString(2, FeedCategory.NONE.toString());
+        prep.execute();
+        prep.close();
     }
     
 }

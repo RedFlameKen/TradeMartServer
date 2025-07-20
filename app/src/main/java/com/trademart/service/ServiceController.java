@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
 import com.trademart.db.IDGenerator;
+import com.trademart.feed.FeedCategory;
 
 public class ServiceController {
 
@@ -52,7 +53,7 @@ public class ServiceController {
                 .setServiceId(rs.getInt("service_id"))
                 .setServiceTitle(rs.getString("service_title"))
                 .setServiceDescription(rs.getString("service_description"))
-                .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
+                .setServiceCategory(FeedCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
                 .setLikes(rs.getInt("likes"))
@@ -86,7 +87,7 @@ public class ServiceController {
                 .setServiceId(rs.getInt("service_id"))
                 .setServiceTitle(rs.getString("service_title"))
                 .setServiceDescription(rs.getString("service_description"))
-                .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
+                .setServiceCategory(FeedCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
                 .setLikes(rs.getInt("likes"))
@@ -107,7 +108,7 @@ public class ServiceController {
                 .setServiceId(rs.getInt("service_id"))
                 .setServiceTitle(rs.getString("service_title"))
                 .setServiceDescription(rs.getString("service_description"))
-                .setServiceCategory(ServiceCategory.parse(rs.getString("service_category")))
+                .setServiceCategory(FeedCategory.parse(rs.getString("service_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setOwnerId(rs.getInt("owner_id"))
                 .setLikes(rs.getInt("likes"))

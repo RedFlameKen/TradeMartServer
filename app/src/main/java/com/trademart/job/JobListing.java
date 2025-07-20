@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import org.json.JSONObject;
 
+import com.trademart.feed.FeedCategory;
+
 public class JobListing {
 
     private int id;
@@ -11,7 +13,7 @@ public class JobListing {
     private String description;
     private double amount;
     private int likes;
-    private JobCategory category;
+    private FeedCategory category;
     private LocalDateTime datePosted;
     private int employerId;
 
@@ -47,7 +49,7 @@ public class JobListing {
     }
 
 
-    public JobCategory getCategory() {
+    public FeedCategory getCategory() {
         return category;
     }
 
@@ -82,7 +84,7 @@ public class JobListing {
         private String description;
         private double amount;
         private int likes;
-        private JobCategory category;
+        private FeedCategory category;
         private LocalDateTime datePosted;
         private int employerId;
 
@@ -116,7 +118,7 @@ public class JobListing {
             return this;
         }
 
-        public Builder setCategory(JobCategory category) {
+        public Builder setCategory(FeedCategory category) {
             this.category = category;
             return this;
         }

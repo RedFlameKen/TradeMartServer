@@ -4,11 +4,13 @@ import java.time.LocalDateTime;
 
 import org.json.JSONObject;
 
+import com.trademart.feed.FeedCategory;
+
 public class Service {
 
     private int serviceId;
     private String serviceTitle;
-    private ServiceCategory serviceCategory;
+    private FeedCategory serviceCategory;
     private int likes;
     private String serviceDescription;
     private LocalDateTime datePosted;
@@ -36,7 +38,7 @@ public class Service {
         return serviceTitle;
     }
 
-    public ServiceCategory getServiceCategory() {
+    public FeedCategory getServiceCategory() {
         return serviceCategory;
     }
 
@@ -81,7 +83,7 @@ public class Service {
         private int serviceId;
         private String serviceTitle;
         private int likes;
-        private ServiceCategory serviceCategory;
+        private FeedCategory serviceCategory;
         private String serviceDescription;
         private LocalDateTime datePosted;
         private double servicePrice;
@@ -93,7 +95,7 @@ public class Service {
             serviceTitle = serviceDescription = "";
             likes = 0;
             serviceCurrency = "PHP";
-            serviceCategory = ServiceCategory.NONE;
+            serviceCategory = FeedCategory.NONE;
             servicePrice = 0;
             datePosted = null;
         }
@@ -108,7 +110,7 @@ public class Service {
             return this;
         }
 
-        public ServiceBuilder setServiceCategory(ServiceCategory serviceCategory) {
+        public ServiceBuilder setServiceCategory(FeedCategory serviceCategory) {
             this.serviceCategory = serviceCategory;
             return this;
         }

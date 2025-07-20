@@ -19,6 +19,7 @@ create table if not exists posts (
     title varchar(128),
     description varchar(2048),
     attached_media varchar(4098),
+    post_category varchar(255),
     likes int,
     user_id int,
     foreign key(user_id) references users(user_id) on delete cascade
@@ -78,6 +79,33 @@ create table if not exists job_listings (
     date_posted datetime,
     employer_id int,
     foreign key(employer_id) references users(user_id)
+);
+
+create table if not exists post_likes (
+    user_id int,
+    post_id int,
+    foreign key(user_id) references users(user_id),
+    foreign key(post_id) references posts(post_id)
+);
+
+create table if not exists service_likes (
+    user_id int,
+    service_id int,
+    foreign key(user_id) references users(user_id),
+    foreign key(service_id) references services(service_id)
+);
+
+create table if not exists job_likes (
+    user_id int,
+    job_id int,
+    foreign key(user_id) references users(user_id),
+    foreign key(job_id) references job_listings(job_id)
+);
+
+create table if not exists user_preferences (
+    user_id int,
+    preferred_category varchar(255),
+    foreign key(user_id) references users(user_id)
 );
 
 create table if not exists payments (

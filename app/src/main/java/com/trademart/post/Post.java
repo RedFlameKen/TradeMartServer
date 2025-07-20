@@ -4,6 +4,8 @@ import java.util.ArrayList;
 
 import org.json.JSONObject;
 
+import com.trademart.feed.FeedCategory;
+
 public class Post {
 
     private int postId;
@@ -13,6 +15,8 @@ public class Post {
 
     private String title;
     private String description;
+
+    private FeedCategory postCategory;
 
     private ArrayList<Integer> attachedMediaIds;
 
@@ -45,6 +49,10 @@ public class Post {
         return description;
     }
     
+    public FeedCategory getPostCategory() {
+        return postCategory;
+    }
+
     public ArrayList<Integer> getAttachedMediaIds() {
         return attachedMediaIds;
     }
@@ -67,6 +75,8 @@ public class Post {
 
         private String title;
         private String description;
+
+        private FeedCategory postCategory;
 
         private ArrayList<Integer> attachedMediaIds;
 
@@ -111,6 +121,11 @@ public class Post {
 
         public PostBuilder setUserId(int userId) {
             this.userId = userId;
+            return this;
+        }
+
+        public PostBuilder setPostCategory(FeedCategory postCategory) {
+            this.postCategory = postCategory;
             return this;
         }
 

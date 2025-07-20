@@ -13,6 +13,7 @@ import org.json.JSONObject;
 import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
 import com.trademart.db.IDGenerator;
+import com.trademart.feed.FeedCategory;
 
 public class JobController {
 
@@ -47,7 +48,7 @@ public class JobController {
                 .setTitle(rs.getString("job_title"))
                 .setDescription(rs.getString("job_description"))
                 .setAmount(rs.getDouble("amount"))
-                .setCategory(JobCategory.parse(rs.getString("job_category")))
+                .setCategory(FeedCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(rs.getInt("employer_id"))
                 .setLikes(rs.getInt("likes"))
@@ -72,7 +73,7 @@ public class JobController {
                 .setTitle(rs.getString("job_title"))
                 .setDescription(rs.getString("job_description"))
                 .setAmount(rs.getDouble("amount"))
-                .setCategory(JobCategory.parse(rs.getString("job_category")))
+                .setCategory(FeedCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(rs.getInt("employer_id"))
                 .setLikes(rs.getInt("likes"))
@@ -107,7 +108,7 @@ public class JobController {
                 .setTitle(rs.getString("job_title"))
                 .setDescription(rs.getString("job_description"))
                 .setAmount(rs.getDouble("amount"))
-                .setCategory(JobCategory.parse(rs.getString("job_category")))
+                .setCategory(FeedCategory.parse(rs.getString("job_category")))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setEmployerId(employerId)
                 .setLikes(rs.getInt("likes"))
@@ -150,7 +151,7 @@ public class JobController {
             .setTitle(json.getString("job_title"))
             .setDescription(json.getString("job_description"))
             .setAmount(json.getDouble("amount"))
-            .setCategory(JobCategory.parse(json.getString("job_category")))
+            .setCategory(FeedCategory.parse(json.getString("job_category")))
             .setDatePosted(LocalDateTime.now())
             .build();
     }

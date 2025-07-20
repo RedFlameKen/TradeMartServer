@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.sql.SQLException;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -24,12 +25,14 @@ import com.trademart.async.SharedResource;
 import com.trademart.db.IDGenerator;
 import com.trademart.encryption.Decryptor;
 import com.trademart.encryption.Hasher;
+import com.trademart.feed.FeedCategory;
 import com.trademart.media.FFmpegUtil;
 import com.trademart.media.MediaController;
 import com.trademart.post.PostController;
 import com.trademart.user.User;
 import com.trademart.user.User.UserBuilder;
 import com.trademart.user.UserController;
+import com.trademart.user.UserPreferences;
 import com.trademart.util.FileUtil;
 import com.trademart.util.Logger;
 import com.trademart.util.Logger.LogLevel;
@@ -84,6 +87,56 @@ public class UserRestController extends RestControllerBase {
             return ResponseEntity.created(location).body(response.toString());
         }
         return ResponseEntity.ok().body(response.toString());
+    }
+
+    @PostMapping("/user/preferences/update")
+    public ResponseEntity<String> setUserPreferencesMapping(@RequestBody String body){
+        UserPreferences preferences;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            preferences = new UserPreferences(json.getInt("user_id"));
+            if(json.has("preferred_category")){
+                preferences.setPreferredCategory(FeedCategory.parse(json.getString("preferred_category")));
+            }
+        } catch (JSONException e) {
+            return badRequestResponse("unable to set preferences");
+        }
+        try {
+            userController.updateUserPreferences(preferences);
+        } catch (SQLException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "preferences updated!")
+                .put("data", preferences.parseJson()).toString());
+    }
+
+    @PostMapping("/user/preferences")
+    public ResponseEntity<String> fetchUserPreferencesMapping(@RequestBody String body){
+        int userId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            userId = json.getInt("user_id");
+        } catch (JSONException e) {
+            return badRequestResponse("unable to set preferences");
+        }
+        UserPreferences preferences;
+        try {
+            preferences = userController.getUserPreferences(userId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "fetched user preferences")
+                .put("data", preferences.parseJson()).toString());
     }
 
     @GetMapping("/user/profile/{user_id}")
