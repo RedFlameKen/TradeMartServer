@@ -86,7 +86,7 @@ public class PaymentController {
     }
 
     private JobPayment findJobPaymentById(int id) throws InterruptedException, SQLException {
-        String command = "select * from payments join job_payment on payments.payment_id = job_payment.payment_id where payment_id=?";
+        String command = "select * from payments join job_payment on payments.payment_id = job_payment.payment_id where payments.payment_id=?";
         PreparedStatement prep = dbController.prepareStatement(command);
 
         prep.setInt(1, id);
@@ -141,7 +141,7 @@ public class PaymentController {
                 .setPaymentId(generatePaymentID())
                 .setType(PaymentType.JOB)
                 .setAmount(json.getDouble("amount"))
-                .setConfirmed(json.getBoolean("is_confirmed"))
+                .setConfirmed(json.has("is_confirmed") ? json.getBoolean("is_confirmed") : false)
                 .setSenderId(json.getInt("sender_id"))
                 .setReceiverId(json.getInt("receiver_id"))
                 .setJobId(json.getInt("job_id"))

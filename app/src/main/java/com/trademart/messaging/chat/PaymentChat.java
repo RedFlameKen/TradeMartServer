@@ -34,7 +34,8 @@ public class PaymentChat extends Chat {
     @Override
     public JSONObject parseJson(){
         return super.parseJson()
-            .put("payment_id", paymentId);
+            .put("payment_id", paymentId)
+            .put("type", ChatType.PAYMENT);
     }
 
 

@@ -79,7 +79,8 @@ public class FeedRestController extends RestControllerBase {
         try {
             ArrayList<FeedItem> feeds = generateFeeds(loadedFeeds, userId);
             for (FeedItem feedItem : feeds) {
-                data.append("feeds", feedItem.parseJSON());
+                data.append("feeds", feedItem.parseJSON()
+                        .put("user_liked", userHasLiked(userId, feedItem)));
             }
         } catch (InterruptedException e) {
             sharedResource.unlock();
@@ -91,6 +92,19 @@ public class FeedRestController extends RestControllerBase {
         }
         return ResponseEntity.ok(createResponse("success", "fetched feed")
                 .put("data", data).toString());
+    }
+
+    private boolean userHasLiked(int userId, FeedItem feed) throws SQLException, InterruptedException{
+        switch (feed.getType()) {
+            case JOB_LISTING:
+                return jobController.userHasLiked(userId, feed.getId());
+            case POST:
+                return postController.userHasLiked(userId, feed.getId());
+            case SERVICE:
+                return serviceController.userHasLiked(userId, feed.getId());
+            default:
+                return false;
+        }
     }
 
     @PostMapping("/feed/like")
@@ -258,6 +272,7 @@ public class FeedRestController extends RestControllerBase {
             .setId(selected.getServiceId())
             .setTitle(selected.getServiceTitle())
             .setUsername(user.getUsername())
+            .setLikes(selected.getLikes())
             .setOwnerId(user.getId())
             .setType(FeedType.SERVICE)
             .setMediaIds(serviceController.getServiceMediaIDs(selected.getServiceId()))
@@ -284,6 +299,7 @@ public class FeedRestController extends RestControllerBase {
             .setTitle(selected.getTitle())
             .setUsername(user.getUsername())
             .setOwnerId(user.getId())
+            .setLikes(selected.getLikes())
             .setType(FeedType.JOB_LISTING)
             .setMediaIds(jobController.getJobMediaIDs(selected.getId()))
             .build();
@@ -309,6 +325,7 @@ public class FeedRestController extends RestControllerBase {
             .setTitle(selected.getTitle())
             .setUsername(user.getUsername())
             .setOwnerId(user.getId())
+            .setLikes(selected.getLikes())
             .setType(FeedType.POST)
             .setMediaIds(postController.getPostMediaIDs(selected.getPostId()))
             .build();

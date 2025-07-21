@@ -163,7 +163,7 @@ public class UserRestController extends RestControllerBase {
             return ResponseEntity.notFound().build();
         }
         String profilePicturePath = user.getProfilePicturePath();
-        if(profilePicturePath.equals("") || profilePicturePath == null){
+        if(profilePicturePath == null || profilePicturePath.equals("")){
             return ResponseEntity.notFound().build();
         }
         byte[] data = mediaController.readFileBytes(new File(profilePicturePath));
