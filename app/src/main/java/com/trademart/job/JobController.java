@@ -97,22 +97,21 @@ public class JobController {
         return job;
     }
 
-    public void likeJob(JobListing job, int likerId) throws InterruptedException, SQLException{
-        if(userHasLiked(likerId, job.getId())){
-            return;
-        }
+    public void likeJob(JobListing job, int likerId, boolean isLiking) throws InterruptedException, SQLException{
         String command = "update job_listings set likes=? where job_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
-        prep.setInt(1, job.getLikes()+1);
+        prep.setInt(1, job.getLikes()+(isLiking ? 1 : -1));
         prep.setInt(2, job.getId());
         prep.execute();
         sharedResource.unlock();
-        registerUserLike(job.getId(), likerId);
+        registerUserLike(job.getId(), likerId, isLiking);
     }
 
-    public void registerUserLike(int jobId, int userId) throws SQLException, InterruptedException{
-        String command = "insert into job_likes(user_id, job_id)values(?,?)";
+    public void registerUserLike(int jobId, int userId, boolean isLiking) throws SQLException, InterruptedException{
+        String command = isLiking ?
+            "insert into job_likes(user_id, job_id)values(?,?)" :
+            "delete from job_likes where user_id=? and job_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, userId);

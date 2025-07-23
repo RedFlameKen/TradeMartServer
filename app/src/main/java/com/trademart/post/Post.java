@@ -26,6 +26,7 @@ public class Post {
         this.likes = builder.likes;
         this.title = builder.title;
         this.description = builder.description;
+        this.postCategory = builder.postCategory;
         this.attachedMediaIds = builder.attachedMediaIds;
     }
 
@@ -63,7 +64,8 @@ public class Post {
             .put("description", description)
             .put("likes", likes)
             .put("post_id", postId)
-            .put("user_id", userId);
+            .put("user_id", userId)
+            .put("post_category", postCategory.toString());
         return json;
     }
 

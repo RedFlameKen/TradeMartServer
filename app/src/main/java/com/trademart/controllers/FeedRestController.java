@@ -19,6 +19,7 @@ import com.trademart.feed.FeedType;
 import com.trademart.job.JobController;
 import com.trademart.job.JobListing;
 import com.trademart.media.MediaController;
+import com.trademart.media.MediaType;
 import com.trademart.post.Post;
 import com.trademart.post.PostController;
 import com.trademart.service.Service;
@@ -112,16 +113,20 @@ public class FeedRestController extends RestControllerBase {
             return badRequestResponse("received a bad request");
         }
         FeedItem updated = null;
+        boolean userLiked = false;
         try {
             switch (feedItem.getType()) {
                 case JOB_LISTING:
                     updated = likeJobListing(userId, feedItem.getId());
+                    userLiked = jobController.userHasLiked(userId, feedItem.getId());
                     break;
                 case POST:
                     updated = likePost(userId, feedItem.getId());
+                    userLiked = postController.userHasLiked(userId, feedItem.getId());
                     break;
                 case SERVICE:
                     updated = likeService(userId, feedItem.getId());
+                    userLiked = serviceController.userHasLiked(userId, feedItem.getId());
                     break;
                 default:
                     break;
@@ -136,20 +141,22 @@ public class FeedRestController extends RestControllerBase {
         }
         return ResponseEntity.ok(createResponse("success", "feed liked")
                 .put("data", new JSONObject()
-                    .put("feed_updated", updated.parseJSON()))
+                    .put("feed_updated", updated.parseJSON()
+                        .put("user_liked", userLiked)))
                 .toString());
     }
 
     private FeedItem likePost(int userId, int postId) throws InterruptedException, SQLException{
         User user = userController.getUserFromDB(userId);
         Post post = postController.findPostByID(postId);
-        postController.likePost(post, userId);
+        boolean isLiking = !postController.userHasLiked(userId, postId);
+        postController.likePost(post, userId, isLiking);
         return new FeedItem.Builder()
             .setId(post.getPostId())
             .setUsername(user.getUsername())
             .setOwnerId(user.getId())
             .setTitle(post.getTitle())
-            .setLikes(post.getLikes()+1)
+            .setLikes(post.getLikes() + (isLiking ? 1 : -1))
             .setType(FeedType.SERVICE)
             .build();
     }
@@ -157,13 +164,14 @@ public class FeedRestController extends RestControllerBase {
     private FeedItem likeService(int userId, int serviceId) throws InterruptedException, SQLException{
         User user = userController.getUserFromDB(userId);
         Service service = serviceController.findServiceByID(serviceId);
-        serviceController.likeService(service, userId);
+        boolean isLiking = !serviceController.userHasLiked(userId, serviceId);
+        serviceController.likeService(service, userId, isLiking);
         return new FeedItem.Builder()
             .setId(service.getServiceId())
             .setUsername(user.getUsername())
             .setOwnerId(user.getId())
             .setTitle(service.getServiceTitle())
-            .setLikes(service.getLikes()+1)
+            .setLikes(service.getLikes() + (isLiking ? 1 : -1))
             .setType(FeedType.SERVICE)
             .build();
     }
@@ -171,13 +179,14 @@ public class FeedRestController extends RestControllerBase {
     private FeedItem likeJobListing(int userId, int jobId) throws InterruptedException, SQLException{
         User user = userController.getUserFromDB(userId);
         JobListing job = jobController.findJobByID(jobId);
-        jobController.likeJob(job, userId);
+        boolean isLiking = !jobController.userHasLiked(userId, jobId);
+        jobController.likeJob(job, userId, isLiking);
         return new FeedItem.Builder()
             .setId(job.getId())
             .setUsername(user.getUsername())
             .setOwnerId(user.getId())
             .setTitle(job.getTitle())
-            .setLikes(job.getLikes()+1)
+            .setLikes(job.getLikes() + (isLiking ? 1 : -1))
             .setType(FeedType.JOB_LISTING)
             .build();
     }
@@ -187,7 +196,6 @@ public class FeedRestController extends RestControllerBase {
         ArrayList<Post> posts = postController.getAllPostsFromDB();
         ArrayList<Service> services = serviceController.getAllServices();
         ArrayList<JobListing> jobs = jobController.getAllJobListingsFromDB();
-
         for (int i = 0; i < FEED_SEND_COUNT; i++) {
             FeedItem item = null;
             FeedCategory categoryFilter = decideCategory(userId);
@@ -204,10 +212,6 @@ public class FeedRestController extends RestControllerBase {
                         break;
                     default:
                         break;
-                }
-                if(i==0){
-                    feeds.add(item);
-                    break;
                 }
             } while(hasId(feeds, item.getId()));
             feeds.add(item);
@@ -254,14 +258,24 @@ public class FeedRestController extends RestControllerBase {
         } while (isLoaded(selected.getServiceId(), FeedType.SERVICE, loadedFeeds) ||
                 !categoryFilterPasses(categories, categoryFilter));
         User user = userController.getUserFromDB(selected.getOwnerId());
+        ArrayList<Integer> mediaIds = serviceController.getServiceMediaIDs(selected.getServiceId());
         return new FeedItem.Builder()
             .setId(selected.getServiceId())
             .setTitle(selected.getServiceTitle())
             .setUsername(user.getUsername())
             .setOwnerId(user.getId())
             .setType(FeedType.SERVICE)
-            .setMediaIds(serviceController.getServiceMediaIDs(selected.getServiceId()))
+            .setMediaIds(mediaIds)
+            .setMediaTypes(getMediaTypes(mediaIds))
             .build();
+    }
+
+    private ArrayList<MediaType> getMediaTypes(ArrayList<Integer> mediaIds) throws SQLException, InterruptedException{
+        ArrayList<MediaType> types = new ArrayList<>();
+        for (int id : mediaIds) {
+            types.add(mediaController.getMediaTypeFromMediaId(id));
+        }
+        return types;
     }
 
     private FeedItem decideJobListingFeed(ArrayList<JobListing> jobs, ArrayList<FeedItem> loadedFeeds, FeedCategory categoryFilter) throws SQLException, InterruptedException{
@@ -279,13 +293,15 @@ public class FeedRestController extends RestControllerBase {
         } while(isLoaded(selected.getId(), FeedType.JOB_LISTING, loadedFeeds) ||
                 !categoryFilterPasses(categories, categoryFilter));
         User user = userController.getUserFromDB(selected.getEmployerId());
+        ArrayList<Integer> mediaIds = jobController.getJobMediaIDs(selected.getId());
         return new FeedItem.Builder()
             .setId(selected.getId())
             .setTitle(selected.getTitle())
             .setUsername(user.getUsername())
             .setOwnerId(user.getId())
             .setType(FeedType.JOB_LISTING)
-            .setMediaIds(jobController.getJobMediaIDs(selected.getId()))
+            .setMediaIds(mediaIds)
+            .setMediaTypes(getMediaTypes(mediaIds))
             .build();
     }
 
@@ -303,6 +319,7 @@ public class FeedRestController extends RestControllerBase {
             }
         } while(isLoaded(selected.getPostId(), FeedType.POST, loadedFeeds) ||
                 !categoryFilterPasses(categories, categoryFilter));
+        ArrayList<Integer> mediaIds = postController.getPostMediaIDs(selected.getPostId());
         User user = userController.getUserFromDB(selected.getUserId());
         return new FeedItem.Builder()
             .setId(selected.getPostId())
@@ -310,7 +327,8 @@ public class FeedRestController extends RestControllerBase {
             .setUsername(user.getUsername())
             .setOwnerId(user.getId())
             .setType(FeedType.POST)
-            .setMediaIds(postController.getPostMediaIDs(selected.getPostId()))
+            .setMediaIds(mediaIds)
+            .setMediaTypes(getMediaTypes(mediaIds))
             .build();
     }
 

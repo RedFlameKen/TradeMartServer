@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 
@@ -23,8 +24,8 @@ import com.trademart.encryption.Hasher;
 import com.trademart.util.Encoder;
 import com.trademart.util.FileUtil;
 import com.trademart.util.Logger;
-import com.trademart.util.OSDetect;
 import com.trademart.util.Logger.LogLevel;
+import com.trademart.util.OSDetect;
 import com.trademart.util.OSDetect.OS;
 import com.trademart.util.TimeUtil;
 
@@ -57,9 +58,11 @@ public class MediaController {
 
     private String mediaStoragePath;
     private SharedResource sharedResource;
+    private DatabaseController dbController;
 
     public MediaController(SharedResource sharedResource) {
         this.sharedResource = sharedResource;
+        dbController = sharedResource.getDatabaseController();
         int status = initController();
         assert status != -1;
     }
@@ -77,6 +80,35 @@ public class MediaController {
 
         initDirectories();
         return 0;
+    }
+
+    public String getMediaPathByID(int mediaId) throws SQLException, InterruptedException {
+        String command = "select * from media where media_id=?";
+        String filepath = null;
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, mediaId);
+        ResultSet rs = prep.executeQuery();
+        rs.next();
+        sharedResource.unlock();
+        filepath = rs.getString("media_url");
+        return filepath;
+    }
+
+    public com.trademart.media.MediaType getMediaTypeFromMediaId(int mediaId) throws SQLException, InterruptedException {
+        com.trademart.media.MediaType type = null;
+        String command = "select media_url from media where media_id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, mediaId);
+        ResultSet rs = prep.executeQuery();
+        if(rs.next()){
+            String mediaUrl = rs.getString("media_url");
+            String extension = FileUtil.getExtension(mediaUrl);
+            type = com.trademart.media.MediaType.byFileExtension(extension);
+        }
+        sharedResource.unlock();
+        return type;
     }
 
     // TODO: Figure out how generation of HLS files work

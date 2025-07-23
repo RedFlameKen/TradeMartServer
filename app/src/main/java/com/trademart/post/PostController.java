@@ -30,12 +30,13 @@ public class PostController {
         }
 
         DatabaseController db = sharedResource.getDatabaseController();
-        PreparedStatement prep = db.prepareStatement("insert into posts (post_id, user_id, title, description, likes) values (?, ?, ?, ?, ?)");
+        PreparedStatement prep = db.prepareStatement("insert into posts (post_id, title, description, likes, user_id, post_category) values (?,?,?,?,?,?)");
         prep.setInt(1, post.getPostId());
-        prep.setInt(2, post.getUserId());
-        prep.setString(3, post.getTitle());
-        prep.setString(4, post.getDescription());
-        prep.setInt(5, post.getLikes());
+        prep.setString(2, post.getTitle());
+        prep.setString(3, post.getDescription());
+        prep.setInt(4, post.getLikes());
+        prep.setInt(5, post.getUserId());
+        prep.setString(6, post.getPostCategory().toString());
 
         prep.execute();
 
@@ -90,22 +91,21 @@ public class PostController {
         return id;
     }
 
-    public void likePost(Post post, int likerId) throws InterruptedException, SQLException{
-        if(userHasLiked(likerId, post.getPostId())){
-            return;
-        }
+    public void likePost(Post post, int likerId, boolean isLiking) throws InterruptedException, SQLException{
         String command = "update posts set likes=? where post_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
-        prep.setInt(1, post.getLikes()+1);
+        prep.setInt(1, post.getLikes()+(isLiking ? 1 : -1));
         prep.setInt(2, post.getPostId());
         prep.execute();
         sharedResource.unlock();
-        registerUserLike(post.getPostId(), likerId);
+        registerUserLike(post.getPostId(), likerId, isLiking);
     }
 
-    public void registerUserLike(int postId, int userId) throws SQLException, InterruptedException{
-        String command = "insert into post_likes(user_id, post_id)values(?,?)";
+    public void registerUserLike(int postId, int userId, boolean isLiking) throws SQLException, InterruptedException{
+        String command = isLiking ?
+            "insert into post_likes(user_id, post_id)values(?,?)" :
+            "delete from post_likes where user_id=? and post_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, userId);

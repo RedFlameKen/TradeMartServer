@@ -84,28 +84,15 @@ public class MediaRestController extends RestControllerBase {
     //     return ResponseEntity.ok(json.toString());
     // }
 
-    private String getMediaPathByID(int mediaId) throws SQLException, InterruptedException {
-        DatabaseController db = sharedResource.getDatabaseController();
-        String command = "select * from media where media_id=?";
-        String filepath = null;
-        sharedResource.lock();
-        PreparedStatement prep = db.prepareStatement(command);
-        prep.setInt(1, mediaId);
-        ResultSet rs = prep.executeQuery();
-        rs.next();
-        sharedResource.unlock();
-        filepath = rs.getString("media_url");
-        return filepath;
-    }
-
     @GetMapping("/media/thumbnail/{media_id}")
     private ResponseEntity<byte[]> serveMediaThumbnailByIDMapping(@PathVariable("media_id") Integer mediaId){
         File file = null;
         try {
-            file = new File(getMediaPathByID(mediaId));
+            file = new File(mediaController.getMediaPathByID(mediaId));
         } catch (SQLException e) {
             return ResponseEntity.notFound().build();
         } catch (InterruptedException e) {
+            sharedResource.unlock();
             return ResponseEntity.internalServerError().build();
         }
         byte[] bytes = null;
@@ -129,7 +116,7 @@ public class MediaRestController extends RestControllerBase {
     private ResponseEntity<byte[]> serveMediaByIDMapping(@PathVariable("media_id") Integer mediaId){
         File file = null;
         try {
-            file = new File(getMediaPathByID(mediaId));
+            file = new File(mediaController.getMediaPathByID(mediaId));
         } catch (SQLException e) {
             return ResponseEntity.notFound().build();
         } catch (InterruptedException e) {

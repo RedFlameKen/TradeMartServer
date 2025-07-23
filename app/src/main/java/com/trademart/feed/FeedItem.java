@@ -4,6 +4,8 @@ import java.util.ArrayList;
 
 import org.json.JSONObject;
 
+import com.trademart.media.MediaType;
+
 public class FeedItem {
     
     private int id;
@@ -13,6 +15,7 @@ public class FeedItem {
     private int ownerId;
     private int likes;
     private ArrayList<Integer> mediaIds;
+    private ArrayList<MediaType> mediaTypes;
 
     public FeedItem(Builder builder){
         id = builder.id;
@@ -22,6 +25,7 @@ public class FeedItem {
         ownerId = builder.ownerId;
         likes = builder.likes;
         mediaIds = builder.mediaIds;
+        mediaTypes = builder.mediaTypes;
     }
 
     public int getId() {
@@ -52,8 +56,12 @@ public class FeedItem {
         return mediaIds;
     }
 
+    public ArrayList<MediaType> getMediaTypes() {
+        return mediaTypes;
+    }
+
     public JSONObject parseJSON(){
-        return new JSONObject()
+        JSONObject json = new JSONObject()
             .put("id", id)
             .put("username", username)
             .put("title", title)
@@ -61,6 +69,16 @@ public class FeedItem {
             .put("type", type.toString())
             .put("owner_id", ownerId)
             .put("media_ids", mediaIds);
+
+        if(mediaTypes != null){
+            ArrayList<String> types = new ArrayList<>();
+            for (MediaType type : mediaTypes) {
+                types.add(type.toString());
+            }
+            json.put("media_types", types);
+        }
+
+        return json;
     }
 
     public static class Builder {
@@ -72,12 +90,14 @@ public class FeedItem {
         private int ownerId;
         private int likes;
         private ArrayList<Integer> mediaIds;
+        private ArrayList<MediaType> mediaTypes;
 
         public Builder(){
             id = ownerId = -1;
             likes = 0;
             username = title = null;
             mediaIds = null;
+            mediaTypes = null;
             type = null;
         }
 
@@ -113,6 +133,11 @@ public class FeedItem {
 
         public Builder setMediaIds(ArrayList<Integer> mediaIds) {
             this.mediaIds = mediaIds;
+            return this;
+        }
+
+        public Builder setMediaTypes(ArrayList<MediaType> mediaTypes) {
+            this.mediaTypes = mediaTypes;
             return this;
         }
 

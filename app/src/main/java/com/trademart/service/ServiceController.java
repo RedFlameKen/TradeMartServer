@@ -79,22 +79,21 @@ public class ServiceController {
         return categories;
     }
 
-    public void likeService(Service service, int likerId) throws InterruptedException, SQLException{
-        if(userHasLiked(likerId, service.getServiceId())){
-            return;
-        }
+    public void likeService(Service service, int likerId, boolean isLiking) throws InterruptedException, SQLException{
         String command = "update services set likes=? where service_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
-        prep.setInt(1, service.getLikes()+1);
+        prep.setInt(1, service.getLikes()+(isLiking ? 1 : -1));
         prep.setInt(2, service.getServiceId());
         prep.execute();
         sharedResource.unlock();
-        registerUserLike(service.getServiceId(), likerId);
+        registerUserLike(service.getServiceId(), likerId, isLiking);
     }
 
-    public void registerUserLike(int serviceId, int userId) throws SQLException, InterruptedException{
-        String command = "insert into service_likes(user_id, service_id)values(?,?)";
+    public void registerUserLike(int serviceId, int userId, boolean isLiking) throws SQLException, InterruptedException{
+        String command = isLiking ?
+            "insert into service_likes(user_id, service_id)values(?,?)" :
+            "delete from service_likes where user_id=? and service_id=?";
         sharedResource.lock();
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, userId);
