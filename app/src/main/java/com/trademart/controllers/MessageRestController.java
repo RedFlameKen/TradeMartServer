@@ -1,7 +1,5 @@
 package com.trademart.controllers;
 
-import static com.trademart.util.Logger.LogLevel.INFO;
-
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -14,14 +12,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
+import com.trademart.job.JobController;
+import com.trademart.job.JobListing;
 import com.trademart.messaging.Convo;
 import com.trademart.messaging.MessageController;
 import com.trademart.messaging.chat.Chat;
+import com.trademart.messaging.chat.ChatType;
 import com.trademart.messaging.chat.MediaChat;
 import com.trademart.messaging.chat.MessageChat;
 import com.trademart.messaging.chat.PaymentChat;
+import com.trademart.payment.JobPayment;
 import com.trademart.payment.Payment;
 import com.trademart.payment.PaymentController;
+import com.trademart.payment.PaymentType;
 import com.trademart.payment.ServicePayment;
 import com.trademart.service.Service;
 import com.trademart.service.ServiceController;
@@ -38,6 +41,7 @@ public class MessageRestController extends RestControllerBase {
     private MessageController messageController;
     private PaymentController paymentController;
     private ServiceController serviceController;
+    private JobController jobController;
 
     public MessageRestController(SharedResource sharedResource){
         this.sharedResource = sharedResource;
@@ -45,6 +49,7 @@ public class MessageRestController extends RestControllerBase {
         messageController = new MessageController(sharedResource);
         paymentController = new PaymentController(sharedResource);
         serviceController = new ServiceController(sharedResource);
+        jobController = new JobController(sharedResource);
     }
 
     @PostMapping("/message/send")
@@ -98,18 +103,27 @@ public class MessageRestController extends RestControllerBase {
                             .toString());
         }
         JSONObject chatJson = null;
-        Logger.log("json type: " + json.getString("type"), INFO);
-        Logger.log("chat type: " + chat.getType().toString(), INFO);
-        switch (chat.getType()) {
-            case MEDIA:
-                chatJson = ((MediaChat)chat).parseJson();
-                break;
-            case MESSAGE:
-                chatJson = ((MessageChat)chat).parseJson();
-                break;
-            case PAYMENT:
-                chatJson = ((PaymentChat)chat).parseJson();
-                break;
+        try {
+            switch (chat.getType()) {
+                case MEDIA:
+                    chatJson = ((MediaChat)chat).parseJson();
+                    break;
+                case MESSAGE:
+                    chatJson = ((MessageChat)chat).parseJson();
+                    break;
+                case PAYMENT:
+                    chatJson = expoundPaymentChatJson((PaymentChat)chat)
+                        .put("type", ChatType.PAYMENT.toString());
+                    break;
+
+            }
+        } catch (InterruptedException e){
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e){
+            e.printStackTrace();
+            return internalServerErrorResponse();
         }
         return ResponseEntity.ok(createResponse("success", "successfully sent the message")
                 .put("data", chatJson)
@@ -118,7 +132,6 @@ public class MessageRestController extends RestControllerBase {
 
     @PostMapping("/message/fetch")
     public ResponseEntity<String> fetchMessagesMapping(@RequestBody String body){
-        Logger.log("fetching...", INFO);
         JSONObject json = null;
         try {
             json = new JSONObject(new JSONTokener(body));
@@ -137,7 +150,6 @@ public class MessageRestController extends RestControllerBase {
         }
         JSONObject responseJson = null;
         try {
-            Logger.log("getting convo", INFO);
             Convo convo = messageController.findConvoByUserIds(user1Id, user2Id);
             if(convo == null){
                 return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no convo found with user1_id and user2_id found");
@@ -155,13 +167,50 @@ public class MessageRestController extends RestControllerBase {
         }
 
 
-        Logger.log("sending response...", INFO);
         return ResponseEntity
                 .ok(createResponse("success", "successfully fetched chats")
                         .put("data", responseJson).toString());
     }
 
     @PostMapping("/message/convos")
+    public ResponseEntity<String> fetchConvoIdByUsersMapping(@RequestBody String body){
+        int user1Id = -1;
+        int user2Id = -1;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            user1Id = json.getInt("user1_id");
+            user2Id = json.getInt("user2_id");
+        } catch (JSONException e){
+            return createBadRequestResponse("MessageRestController#fetchMessageIdsMapping()", "json was badly formatted");
+        }
+        User user1 = userController.getUserFromDB(user1Id);
+        if(user1 == null){
+            return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user1_id found");
+        }
+        User user2 = userController.getUserFromDB(user2Id);
+        if(user2 == null){
+            return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user2_id found");
+        }
+        Convo convo;
+        try {
+            convo = messageController.findConvoByUserIds(user1Id, user2Id);
+            if(convo == null){
+                convo = messageController.initConvo(user1Id, user2Id);
+            }
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "conversation found")
+                .put("data", new JSONObject().put("convo_id", convo.getConvoId()))
+                .toString());
+    }
+
+    @PostMapping("/message/convos/user")
     public ResponseEntity<String> fetchUserConvosMapping(@RequestBody String body){
         JSONObject json = null;
         try {
@@ -232,7 +281,7 @@ public class MessageRestController extends RestControllerBase {
                     chatJson.put("message", ((MessageChat)chat).getMessage());
                     break;
                 case PAYMENT:
-                    expoundPaymentChatJson((PaymentChat)chat, chatJson);
+                    chatJson = expoundPaymentChatJson((PaymentChat)chat);
                     break;
             }
             json.append("chats", chatJson);
@@ -240,17 +289,25 @@ public class MessageRestController extends RestControllerBase {
         return json;
     }
 
-    private void expoundPaymentChatJson(PaymentChat chat, JSONObject chatJson) throws InterruptedException, SQLException{
+    private JSONObject expoundPaymentChatJson(PaymentChat chat) throws InterruptedException, SQLException{
+        JSONObject chatJson = chat.parseJson();
         Payment payment = paymentController.findPaymentById(chat.getPaymentId());
         chatJson.put("payment_id", ((PaymentChat)chat).getPaymentId())
-            .put("amount", payment.getAmount());
+            .put("amount", payment.getAmount())
+            .put("is_confirmed", payment.isConfirmed());
 
         if(payment instanceof ServicePayment){
             Service service = serviceController.findServiceByID(
                     ((ServicePayment)payment).getServiceId());
             chatJson.put("payment_reason", service.getServiceTitle())
-                .put("payment_type", payment.getType());
+                .put("payment_type", PaymentType.SERVICE.toString());
         }
+        if(payment instanceof JobPayment){
+            JobListing job = jobController.findJobByID(((JobPayment)payment).getJobId());
+            chatJson.put("payment_reason", job.getTitle())
+                .put("payment_type", PaymentType.JOB.toString());
+        }
+        return chatJson;
     }
 
 }

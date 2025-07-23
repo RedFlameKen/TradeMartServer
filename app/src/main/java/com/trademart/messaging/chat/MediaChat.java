@@ -20,7 +20,8 @@ public class MediaChat extends Chat {
     @Override
     public JSONObject parseJson(){
         return super.parseJson()
-            .put("media_id", mediaId);
+            .put("media_id", mediaId)
+            .put("type", ChatType.MEDIA);
     }
 
     public static class Builder extends Chat.Builder {

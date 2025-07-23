@@ -1,5 +1,7 @@
 package com.trademart.controllers;
 
+import static com.trademart.util.Logger.LogLevel.INFO;
+
 import java.sql.SQLException;
 
 import org.json.JSONException;
@@ -20,6 +22,7 @@ import com.trademart.payment.PaymentType;
 import com.trademart.payment.ServicePayment;
 import com.trademart.service.Service;
 import com.trademart.service.ServiceController;
+import com.trademart.util.Logger;
 
 @RestController
 public class PaymentRestController extends RestControllerBase {
@@ -147,19 +150,22 @@ public class PaymentRestController extends RestControllerBase {
 
     @PostMapping("/payment/create/job")
     public ResponseEntity<String> createJobPaymentMapping(@RequestBody String body){
-        JSONObject json = null;
         JobPayment payment = null;
         try {
-            json = new JSONObject(new JSONTokener(body));
+            JSONObject json = new JSONObject(new JSONTokener(body));
             payment = paymentController.createJobPayment(json);
         } catch (JSONException e){
+            e.printStackTrace();
             return badRequestResponse("request was badly formatted");
         }
         JSONObject responseJson = null;
         try {
             paymentController.writePaymentToDB(payment);
             JobListing job = jobController.findJobByID(payment.getJobId());
-            if(job == null) return notFoundResponse();
+            if(job == null) {
+                Logger.log("not found response for /payment/create/job", INFO);
+                return notFoundResponse();
+            };
             responseJson = createJobPaymentResponseEntity(payment, job);
         } catch (InterruptedException e) {
             sharedResource.unlock();
