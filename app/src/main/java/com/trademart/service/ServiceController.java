@@ -32,34 +32,21 @@ public class ServiceController {
         return id;
     }
 
-    public Service findServiceByID(int serviceId){
+    public Service findServiceByID(int serviceId) throws InterruptedException, SQLException{
         String command = "select * from services where service_id=" + serviceId;
         Service service = null;
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return null;
-        }
-        if(dbController.getCommandRowCount(command) <= 0){
-            sharedResource.unlock();
-            return null;
-        }
-        try {
-            PreparedStatement prep = dbController.prepareStatement(command);
-            ResultSet rs = prep.executeQuery();
-            rs.next();
-            service = new Service.ServiceBuilder()
-                .setServiceId(rs.getInt("service_id"))
-                .setServiceTitle(rs.getString("service_title"))
-                .setServiceDescription(rs.getString("service_description"))
-                .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
-                .setOwnerId(rs.getInt("owner_id"))
-                .setLikes(rs.getInt("likes"))
-                .build();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        ResultSet rs = prep.executeQuery();
+        rs.next();
+        service = new Service.ServiceBuilder()
+            .setServiceId(rs.getInt("service_id"))
+            .setServiceTitle(rs.getString("service_title"))
+            .setServiceDescription(rs.getString("service_description"))
+            .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
+            .setOwnerId(rs.getInt("owner_id"))
+            .setLikes(rs.getInt("likes"))
+            .build();
         sharedResource.unlock();
         return service;
     }
@@ -159,7 +146,7 @@ public class ServiceController {
         return services;
     }
 
-    public void writeServiceToDB(Service service) throws SQLException, InterruptedException {
+    public void writeServiceToDB(Service service, ArrayList<FeedCategory> categories) throws SQLException, InterruptedException {
         String command = "insert into services(service_id,service_title,service_description,likes,service_price,service_currency,date_posted, owner_id) values (?,?,?,?,?,?,?,?)";
         sharedResource.lock();
 
@@ -176,14 +163,29 @@ public class ServiceController {
         prep.execute();
 
         sharedResource.unlock();
-    }
-    public ArrayList<Integer> getServiceMediaIDs(int serviceId) throws SQLException{
-        ArrayList<Integer> ids = new ArrayList<>();
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        if(categories.size() == 0){
+            categories.add(FeedCategory.NONE);
         }
+        for (FeedCategory category : categories) {
+            insertCategoryToDB(category, service.getServiceId());
+        }
+    }
+
+    private void insertCategoryToDB(FeedCategory category, int serviceId) throws SQLException, InterruptedException{
+        String command = "insert into service_categories(service_id, category)values(?,?)";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, serviceId);
+        prep.setString(2, category.toString());
+        prep.execute();
+        prep.close();
+
+        sharedResource.unlock();
+    }
+
+    public ArrayList<Integer> getServiceMediaIDs(int serviceId) throws SQLException, InterruptedException{
+        ArrayList<Integer> ids = new ArrayList<>();
+        sharedResource.lock();
 
         DatabaseController db = sharedResource.getDatabaseController();
         String command = "select service_media.media_id from service_media join media on media.media_id = service_media.media_id where service_media.service_id=? order by date_uploaded";

@@ -7,7 +7,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -147,12 +149,25 @@ public class UserRestController extends RestControllerBase {
             return ResponseEntity.notFound().build();
         }
 
-        JSONObject response = new JSONObject()
-                .put("username", user.getUsername())
-                .put("user_id", user.getId())
-                .put("email", user.getEmail())
-                .put("verified", user.getVerified())
-                .put("post_count", postController.getUserPostCount(userID));
+        JSONObject response;
+        try {
+            response = new JSONObject()
+                    .put("username", user.getUsername())
+                    .put("user_id", user.getId())
+                    .put("email", user.getEmail())
+                    .put("verified", user.getVerified())
+                    .put("post_count", postController.getUserPostCount(userID));
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return badRequestResponse("unable to post");
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         return ResponseEntity.ok(response.toString());
     }
 

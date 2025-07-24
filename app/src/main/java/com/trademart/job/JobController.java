@@ -159,10 +159,10 @@ public class JobController {
         return jobs;
     }
 
-    public void writeJobToDb(JobListing job) throws SQLException, InterruptedException{
+    public void writeJobToDb(JobListing job, ArrayList<FeedCategory> categories) throws SQLException, InterruptedException{
         sharedResource.lock();
 
-        String command = "insert into job_listings(job_id, job_title, job_description, amount, likes, date_posted, employer_id)values(?,?,?,?,?,?)";
+        String command = "insert into job_listings(job_id, job_title, job_description, amount, likes, date_posted, employer_id)values(?,?,?,?,?,?,?)";
         PreparedStatement prep = dbController.prepareStatement(command);
         prep.setInt(1, job.getId());
         prep.setString(2, job.getTitle());
@@ -172,6 +172,24 @@ public class JobController {
         prep.setTimestamp(6, Timestamp.valueOf(job.getDatePosted()));
         prep.setInt(7, job.getEmployerId());
         prep.execute();
+
+        sharedResource.unlock();
+        if(categories.size() == 0){
+            categories.add(FeedCategory.NONE);
+        }
+        for (FeedCategory category : categories) {
+            insertCategoryToDB(category, job.getId());
+        }
+    }
+
+    private void insertCategoryToDB(FeedCategory category, int jobId) throws SQLException, InterruptedException{
+        String command = "insert into job_categories(job_id, category)values(?,?)";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, jobId);
+        prep.setString(2, category.toString());
+        prep.execute();
+        prep.close();
 
         sharedResource.unlock();
     }

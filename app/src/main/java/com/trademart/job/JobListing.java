@@ -13,7 +13,6 @@ public class JobListing {
     private String description;
     private double amount;
     private int likes;
-    private FeedCategory category;
     private LocalDateTime datePosted;
     private int employerId;
 
@@ -24,7 +23,6 @@ public class JobListing {
         this.likes = builder.likes;
         this.description = builder.description;
         this.amount = builder.amount;
-        this.category = builder.category;
         this.datePosted = builder.datePosted;
         this.employerId = builder.employerId;
     }
@@ -48,12 +46,6 @@ public class JobListing {
         return amount;
     }
 
-
-    public FeedCategory getCategory() {
-        return category;
-    }
-
-
     public LocalDateTime getDatePosted() {
         return datePosted;
     }
@@ -71,7 +63,6 @@ public class JobListing {
             .put("job_id", id)
             .put("job_title", title)
             .put("job_description", description)
-            .put("job_category", category)
             .put("amount", amount)
             .put("date_posted", datePosted)
             .put("employer_id", employerId);
@@ -84,7 +75,6 @@ public class JobListing {
         private String description;
         private double amount;
         private int likes;
-        private FeedCategory category;
         private LocalDateTime datePosted;
         private int employerId;
 
@@ -94,7 +84,6 @@ public class JobListing {
             likes = 0;
             description = "";
             title = null;
-            category = null;
             datePosted = null;
         }
 
@@ -115,11 +104,6 @@ public class JobListing {
 
         public Builder setAmount(double amount) {
             this.amount = amount;
-            return this;
-        }
-
-        public Builder setCategory(FeedCategory category) {
-            this.category = category;
             return this;
         }
 

@@ -10,7 +10,6 @@ public class Service {
 
     private int serviceId;
     private String serviceTitle;
-    private FeedCategory serviceCategory;
     private int likes;
     private String serviceDescription;
     private LocalDateTime datePosted;
@@ -21,7 +20,6 @@ public class Service {
     public Service(ServiceBuilder builder){
         serviceId = builder.serviceId;
         serviceTitle = builder.serviceTitle;
-        serviceCategory = builder.serviceCategory;
         likes = builder.likes;
         serviceDescription = builder.serviceDescription;
         servicePrice = builder.servicePrice;
@@ -36,10 +34,6 @@ public class Service {
 
     public String getServiceTitle() {
         return serviceTitle;
-    }
-
-    public FeedCategory getServiceCategory() {
-        return serviceCategory;
     }
 
     public String getServiceDescription() {
@@ -70,7 +64,6 @@ public class Service {
         return new JSONObject()
             .put("service_id", serviceId)
             .put("service_title", serviceTitle)
-            .put("service_category", serviceCategory)
             .put("service_description", serviceDescription)
             .put("date_posted", datePosted)
             .put("service_price", servicePrice)
@@ -83,7 +76,6 @@ public class Service {
         private int serviceId;
         private String serviceTitle;
         private int likes;
-        private FeedCategory serviceCategory;
         private String serviceDescription;
         private LocalDateTime datePosted;
         private double servicePrice;
@@ -95,9 +87,8 @@ public class Service {
             serviceTitle = serviceDescription = "";
             likes = 0;
             serviceCurrency = "PHP";
-            serviceCategory = FeedCategory.NONE;
             servicePrice = 0;
-            datePosted = null;
+            datePosted = LocalDateTime.now();
         }
 
         public ServiceBuilder setServiceId(int serviceId) {
@@ -107,11 +98,6 @@ public class Service {
 
         public ServiceBuilder setServiceTitle(String serviceTitle) {
             this.serviceTitle = serviceTitle;
-            return this;
-        }
-
-        public ServiceBuilder setServiceCategory(FeedCategory serviceCategory) {
-            this.serviceCategory = serviceCategory;
             return this;
         }
 

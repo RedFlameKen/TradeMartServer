@@ -3,6 +3,8 @@ package com.trademart.post;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import com.trademart.async.SharedResource;
@@ -22,23 +24,37 @@ public class PostController {
         dbController = sharedResource.getDatabaseController();
     }
 
-    public void insertPostToDB(Post post) throws SQLException{
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public void insertPostToDB(Post post, ArrayList<FeedCategory> categories) throws SQLException, InterruptedException{
+        sharedResource.lock();
 
         DatabaseController db = sharedResource.getDatabaseController();
-        PreparedStatement prep = db.prepareStatement("insert into posts (post_id, title, description, likes, user_id, post_category) values (?,?,?,?,?,?)");
+        PreparedStatement prep = db.prepareStatement("insert into posts (post_id, title, description, date_posted, likes, user_id) values (?,?,?,?,?,?)");
         prep.setInt(1, post.getPostId());
         prep.setString(2, post.getTitle());
         prep.setString(3, post.getDescription());
-        prep.setInt(4, post.getLikes());
-        prep.setInt(5, post.getUserId());
-        prep.setString(6, post.getPostCategory().toString());
+        prep.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
+        prep.setInt(5, 0);
+        prep.setInt(6, post.getUserId());
 
         prep.execute();
+
+        sharedResource.unlock();
+        if(categories.size() == 0){
+            categories.add(FeedCategory.NONE);
+        }
+        for (FeedCategory feedCategory : categories) {
+            insertCategoryToDB(feedCategory, post.getPostId());
+        }
+    }
+
+    private void insertCategoryToDB(FeedCategory category, int postId) throws SQLException, InterruptedException{
+        String command = "insert into post_categories(post_id, category)values(?,?)";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, postId);
+        prep.setString(2, category.toString());
+        prep.execute();
+        prep.close();
 
         sharedResource.unlock();
     }
@@ -147,7 +163,7 @@ public class PostController {
     public ArrayList<Post> getAllPostsFromDB() throws InterruptedException, SQLException{
         ArrayList<Post> posts = new ArrayList<>();
         sharedResource.lock();
-        String command = "select * from posts";
+        String command = "select * from posts order by date_posted desc";
         PreparedStatement prep = dbController.prepareStatement(command);
         ResultSet rs = prep.executeQuery();
         while(rs.next()){
@@ -163,52 +179,38 @@ public class PostController {
         return posts;
     }
 
-    public Post findPostByID(int postId) {
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public Post findPostByID(int postId) throws InterruptedException, SQLException {
+        sharedResource.lock();
 
         Post post = null;
-        try {
-            PreparedStatement prep = sharedResource.getDatabaseController()
-                .prepareStatement("select * from posts where post_id=?");
-            prep.setInt(1, postId);
-            ResultSet rs = prep.executeQuery();
-            rs.next();
+        PreparedStatement prep = sharedResource.getDatabaseController()
+            .prepareStatement("select * from posts where post_id=? order by date_posted desc");
+        prep.setInt(1, postId);
+        ResultSet rs = prep.executeQuery();
+        if(rs.next()){
             post = new Post.PostBuilder()
                 .setPostId(postId)
                 .setUserId(rs.getInt("user_id"))
                 .setTitle(rs.getString("title"))
                 .setDescription(rs.getString("description"))
+                .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                 .setLikes(rs.getInt("likes"))
                 .build();
-        } catch (SQLException e) {
-            Logger.log("Unable to find a post with the id " + postId, LogLevel.WARNING);
         }
 
         sharedResource.unlock();
         return post;
     }
 
-    public int getUserPostCount(int userId){
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public int getUserPostCount(int userId) throws InterruptedException, SQLException{
+        sharedResource.lock();
         int count = 0;
-        try {
-            String command = "select COUNT(*) from posts where user_id=?";
-            PreparedStatement prep = sharedResource.getDatabaseController().prepareStatement(command);
-            prep.setInt(1, userId);
-            ResultSet rs = prep.executeQuery();
-            rs.next();
-            count = rs.getInt(1);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        String command = "select COUNT(*) from posts where user_id=?";
+        PreparedStatement prep = sharedResource.getDatabaseController().prepareStatement(command);
+        prep.setInt(1, userId);
+        ResultSet rs = prep.executeQuery();
+        rs.next();
+        count = rs.getInt(1);
         sharedResource.unlock();
         return count;
     }

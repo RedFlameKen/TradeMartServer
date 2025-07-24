@@ -20,6 +20,7 @@ create table if not exists posts (
     description varchar(2048),
     attached_media varchar(4098),
     post_category varchar(255),
+    date_posted datetime,
     likes int,
     user_id int,
     foreign key(user_id) references users(user_id) on delete cascade

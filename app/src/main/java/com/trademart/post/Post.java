@@ -1,5 +1,6 @@
 package com.trademart.post;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import org.json.JSONObject;
@@ -16,6 +17,8 @@ public class Post {
     private String title;
     private String description;
 
+    private LocalDateTime datePosted;
+
     private FeedCategory postCategory;
 
     private ArrayList<Integer> attachedMediaIds;
@@ -28,6 +31,7 @@ public class Post {
         this.description = builder.description;
         this.postCategory = builder.postCategory;
         this.attachedMediaIds = builder.attachedMediaIds;
+        this.datePosted = builder.datePosted;
     }
 
     public int getPostId() {
@@ -58,14 +62,17 @@ public class Post {
         return attachedMediaIds;
     }
 
+    public LocalDateTime getDatePosted() {
+        return datePosted;
+    }
+
     public JSONObject parseJSON(){
         JSONObject json = new JSONObject()
             .put("title", title)
             .put("description", description)
             .put("likes", likes)
             .put("post_id", postId)
-            .put("user_id", userId)
-            .put("post_category", postCategory.toString());
+            .put("user_id", userId);
         return json;
     }
 
@@ -78,12 +85,15 @@ public class Post {
         private String title;
         private String description;
 
+        private LocalDateTime datePosted;
+
         private FeedCategory postCategory;
 
         private ArrayList<Integer> attachedMediaIds;
 
         public PostBuilder(ArrayList<Integer> attachedMediaIds){
             this.attachedMediaIds = attachedMediaIds;
+            datePosted = LocalDateTime.now();
             likes = postId = userId = 0;
             title = null;
             description = "";
@@ -128,6 +138,11 @@ public class Post {
 
         public PostBuilder setPostCategory(FeedCategory postCategory) {
             this.postCategory = postCategory;
+            return this;
+        }
+
+        public PostBuilder setDatePosted(LocalDateTime datePosted) {
+            this.datePosted = datePosted;
             return this;
         }
 

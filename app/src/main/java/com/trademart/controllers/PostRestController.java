@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
 import com.trademart.db.DatabaseController;
+import com.trademart.feed.FeedCategory;
 import com.trademart.media.MediaController;
 import com.trademart.post.Post;
 import com.trademart.post.Post.PostBuilder;
@@ -112,9 +113,15 @@ public class PostRestController extends RestControllerBase {
     @PostMapping("/post/publish")
     public ResponseEntity<String> publishPostMapping(@RequestBody String post_data){
         JSONObject json = null;
+        ArrayList<FeedCategory> categories = new ArrayList<>();
         try {
             json = new JSONObject(new JSONTokener(post_data));
+            JSONArray categoriesJson = json.getJSONArray("categories");
+            for (int i = 0; i < categoriesJson.length(); i++) {
+                categories.add(FeedCategory.valueOf(categoriesJson.getString(i)));
+            }
         } catch (JSONException e) {
+            e.printStackTrace();
             Logger.log("received a bad request upon publishing a post", LogLevel.WARNING);
             return ResponseEntity
                 .badRequest()
@@ -127,20 +134,43 @@ public class PostRestController extends RestControllerBase {
         }
         Post createdPost = null;
         try {
-            createdPost = publishPost(json, userId);
+            createdPost = publishPost(json, userId, categories);
         } catch (JSONException e) {
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
         }
-        return ResponseEntity.ok(createdPost.parseJSON().toString());
+        return ResponseEntity.ok(createdPost.parseJSON()
+                .put("categories", categories)
+                .toString());
     }
 
     @GetMapping("/post/{post_id}")
     public ResponseEntity<String> fetchPostMapping(@PathVariable("post_id") int postId){
-        Post post = postController.findPostByID(postId);
+        Post post;
+        ArrayList<FeedCategory> categories;
+        try {
+            post = postController.findPostByID(postId);
+            categories = postController.getCategoriesById(postId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if (post == null) {
             return ResponseEntity.notFound().build();
         }
-        JSONObject json = post.parseJSON();
+        JSONObject json = post.parseJSON()
+            .put("categories", categories);
         return ResponseEntity.ok(json.toString());
     }
 
@@ -159,13 +189,24 @@ public class PostRestController extends RestControllerBase {
 
     @PostMapping("/post/publish/{post_id}/media")
     public ResponseEntity<String> uploadPostMediaMapping(@PathVariable("post_id") int postId, @RequestHeader("Content-Disposition") String disposition, @RequestBody byte[] content){
-        Post post = postController.findPostByID(postId);
+        Post post;
+        try {
+            post = postController.findPostByID(postId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if (post == null) {
             return ResponseEntity.notFound().build();
         }
         String filename = ContentDisposition.parse(disposition).getFilename();
         int mediaId = -1;
         try {
+            Logger.log("received filename: ".concat(filename), LogLevel.INFO);
             File file = mediaController.writeFile(filename, content);
             String filepath = file.getAbsolutePath();
             String ext = FileUtil.getExtension(file.getName());
@@ -208,29 +249,28 @@ public class PostRestController extends RestControllerBase {
         } catch (JSONException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
         }
         Logger.log("resposne json: " + newIdsJson.toString(), LogLevel.INFO);
         return ResponseEntity.ok(newIdsJson.toString());
     }
 
-    private ArrayList<Integer> getUnloadedPostIDs(ArrayList<Integer> loadedIds, int userId){
+    private ArrayList<Integer> getUnloadedPostIDs(ArrayList<Integer> loadedIds, int userId) throws SQLException, InterruptedException{
         String command = buildUnloadedPostIDsCommand(loadedIds, userId);
         ArrayList<Integer> newIds = new ArrayList<>();
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        sharedResource.lock();
 
         DatabaseController db = sharedResource.getDatabaseController();
-        try {
-            PreparedStatement prep = db.prepareStatement(command);
-            ResultSet rs = prep.executeQuery();
-            while(rs.next()){
-                newIds.add(rs.getInt("post_id"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        PreparedStatement prep = db.prepareStatement(command);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            newIds.add(rs.getInt("post_id"));
         }
 
         sharedResource.unlock();
@@ -254,7 +294,7 @@ public class PostRestController extends RestControllerBase {
         return command.toString();
     }
 
-    private Post publishPost(JSONObject json, int userId) throws JSONException {
+    private Post publishPost(JSONObject json, int userId, ArrayList<FeedCategory> categories) throws JSONException, SQLException, InterruptedException {
         String title = json.getString("title");
         String description = json.getString("description");
         int id = postController.generatePostID();
@@ -266,11 +306,7 @@ public class PostRestController extends RestControllerBase {
             .setPostId(id)
             .setLikes(0)
             .build();
-        try {
-            postController.insertPostToDB(post);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        postController.insertPostToDB(post, categories);
         return post;
     }
 

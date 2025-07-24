@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
-import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.springframework.http.ContentDisposition;
@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
+import com.trademart.feed.FeedCategory;
 import com.trademart.media.MediaController;
 import com.trademart.service.Service;
 import com.trademart.service.ServiceController;
@@ -44,7 +45,19 @@ public class ServiceRestController extends RestControllerBase {
 
     @GetMapping("/service/{service_id}")
     public ResponseEntity<String> serveServiceDetailsMapping(@PathVariable("service_id") int serviceId){
-        Service service = serviceController.findServiceByID(serviceId);
+        Service service;
+        ArrayList<FeedCategory> categories;
+        try {
+            service = serviceController.findServiceByID(serviceId);
+            categories = serviceController.getCategoriesById(serviceId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if(service == null){
             return ResponseEntity.notFound().build();
         }
@@ -56,7 +69,8 @@ public class ServiceRestController extends RestControllerBase {
             .put("service_price", service.getServicePrice())
             .put("service_currency", service.getServiceCurrency())
             .put("date_posted", service.getDatePosted())
-            .put("owner_id", service.getOwnerId());
+            .put("owner_id", service.getOwnerId())
+            .put("categories", categories);
 
         return ResponseEntity.ok(json.toString());
     }
@@ -70,6 +84,10 @@ public class ServiceRestController extends RestControllerBase {
         } catch (SQLException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
         }
         return ResponseEntity.ok(json.toString());
     }
@@ -106,7 +124,17 @@ public class ServiceRestController extends RestControllerBase {
     public ResponseEntity<String> uploadServiceMediaMapping(@PathVariable("service_id") int serviceId,
             @RequestHeader("Content-Disposition") String dispositionStr, @RequestBody byte[] data) {
 
-        Service service = serviceController.findServiceByID(serviceId);
+        Service service;
+        try {
+            service = serviceController.findServiceByID(serviceId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if(service == null){
             return ResponseEntity.notFound().build();
         }
@@ -137,8 +165,13 @@ public class ServiceRestController extends RestControllerBase {
     @PostMapping("/service/create")
     public ResponseEntity<String> createServiceDetailsMapping(@RequestBody String content){
         JSONObject json = null;
+        ArrayList<FeedCategory> categories = new ArrayList<>();
         try {
             json = new JSONObject(new JSONTokener(content));
+            JSONArray categoriesJson = json.getJSONArray("categories");
+            for (int i = 0; i < categoriesJson.length(); i++) {
+                categories.add(FeedCategory.valueOf(categoriesJson.getString(i)));
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().build();
@@ -151,7 +184,7 @@ public class ServiceRestController extends RestControllerBase {
         }
         Service service = null;
         try {
-            service = publishService(json, ownerId);
+            service = publishService(json, ownerId, categories);
         } catch (SQLException | InterruptedException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
@@ -160,7 +193,7 @@ public class ServiceRestController extends RestControllerBase {
         return ResponseEntity.ok(service.parseJson().toString());
     }
 
-    private Service publishService(JSONObject json, int ownerId) throws SQLException, InterruptedException{
+    private Service publishService(JSONObject json, int ownerId, ArrayList<FeedCategory> categories) throws SQLException, InterruptedException{
         int id = serviceController.generateServiceID();
         Service service = new Service.ServiceBuilder()
             .setServiceId(id)
@@ -171,7 +204,7 @@ public class ServiceRestController extends RestControllerBase {
             .setDatePosted(LocalDateTime.parse(json.getString("date_posted")))
             .setOwnerId(ownerId)
             .build();
-        serviceController.writeServiceToDB(service);
+        serviceController.writeServiceToDB(service, categories);
         return service;
     }
     

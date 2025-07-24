@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -19,12 +20,15 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
+import com.trademart.feed.FeedCategory;
 import com.trademart.job.JobController;
 import com.trademart.job.JobListing;
 import com.trademart.media.MediaController;
 import com.trademart.user.User;
 import com.trademart.user.UserController;
 import com.trademart.util.FileUtil;
+import com.trademart.util.Logger;
+import com.trademart.util.Logger.LogLevel;
 
 @RestController
 public class JobRestController extends RestControllerBase {
@@ -65,8 +69,10 @@ public class JobRestController extends RestControllerBase {
     @GetMapping("/jobs/find/{job_id}")
     public ResponseEntity<String> getJobMapping(@PathVariable("job_id") int jobId){
         JobListing job = null;
+        ArrayList<FeedCategory> categories;
         try {
             job = jobController.findJobByID(jobId);
+            categories = jobController.getCategoriesById(jobId);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -79,7 +85,8 @@ public class JobRestController extends RestControllerBase {
             return notFoundResponse();
         }
         return ResponseEntity.ok(createResponse("success", "Job Listing found!")
-                .put("data", job.parseJson()).toString());
+                .put("data", job.parseJson()
+                    .put("categories", categories)).toString());
     }
 
     @GetMapping("/jobs/{job_id}/media")
@@ -99,11 +106,17 @@ public class JobRestController extends RestControllerBase {
     public ResponseEntity<String> createJobMapping(@RequestBody String body){
         JSONObject json = null;
         User employer = null;
+        ArrayList<FeedCategory> categories = new ArrayList<>();
         try {
             json = new JSONObject(new JSONTokener(body));
+            Logger.log("received /jobs/create json: " + json.toString(), LogLevel.INFO);
             employer = userController.getUserFromDB(json.getInt("employer_id"));
             if(employer == null){
                 return notFoundResponse();
+            }
+            JSONArray categoriesJson = json.getJSONArray("categories");
+            for (int i = 0; i < categoriesJson.length(); i++) {
+                categories.add(FeedCategory.valueOf(categoriesJson.getString(i)));
             }
         } catch (JSONException e){
             e.printStackTrace();
@@ -111,7 +124,7 @@ public class JobRestController extends RestControllerBase {
         }
         JobListing job = jobController.createJobFromJSON(json);
         try {
-            jobController.writeJobToDb(job);
+            jobController.writeJobToDb(job, categories);
         } catch (SQLException e) {
             e.printStackTrace();
             return internalServerErrorResponse("unable to post Job Listing!");
