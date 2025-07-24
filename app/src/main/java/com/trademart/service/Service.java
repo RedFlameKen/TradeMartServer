@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 
 import org.json.JSONObject;
 
-import com.trademart.feed.FeedCategory;
+import com.trademart.search.SearchIndexable;
 
-public class Service {
+public class Service implements SearchIndexable {
 
     private int serviceId;
     private String serviceTitle;
@@ -136,5 +136,24 @@ public class Service {
             return new Service(this);
         }
 
+    }
+
+    @Override
+    public int getIndexId() {
+        return serviceId;
+    }
+
+    @Override
+    public String getKeyTerm() {
+        return serviceTitle;
+    }
+
+    @Override
+    public JSONObject getIndexJson(double relPoints) {
+        return new JSONObject()
+            .put("result", serviceTitle)
+            .put("id", serviceId)
+            .put("relevance", relPoints)
+            .put("entity", parseJson());
     }
 }

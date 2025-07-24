@@ -47,7 +47,17 @@ public class JobRestController extends RestControllerBase {
     
     @GetMapping("/jobs/employer/{employer_id}")
     public ResponseEntity<String> fetchJobsMapping(@PathVariable("employer_id") int employerId){
-        User employer = userController.getUserFromDB(employerId);
+        User employer;
+        try {
+            employer = userController.getUserFromDB(employerId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if(employer == null){
             return notFoundResponse();
         }
@@ -121,6 +131,13 @@ public class JobRestController extends RestControllerBase {
         } catch (JSONException e){
             e.printStackTrace();
             return badRequestResponse("request was badly formatted");
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
         }
         JobListing job = jobController.createJobFromJSON(json);
         try {

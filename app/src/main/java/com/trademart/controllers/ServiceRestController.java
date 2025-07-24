@@ -94,7 +94,17 @@ public class ServiceRestController extends RestControllerBase {
 
     @GetMapping("/service/list/{user_id}")
     public ResponseEntity<String> fetchServicesByUserIdMapping(@PathVariable("user_id") int userId){
-        User user = userController.getUserFromDB(userId);
+        User user;
+        try {
+            user = userController.getUserFromDB(userId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if (user == null) {
             return internalServerErrorResponse("no user with the given owner_id was found");
         }
@@ -177,7 +187,17 @@ public class ServiceRestController extends RestControllerBase {
             return ResponseEntity.badRequest().build();
         }
         int ownerId = json.getInt("owner_id");
-        User user = userController.getUserFromDB(ownerId);
+        User user;
+        try {
+            user = userController.getUserFromDB(ownerId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if (user == null) {
             return ResponseEntity.internalServerError()
                     .body(createResponse("failed", "no user with the given user_id was found").toString());

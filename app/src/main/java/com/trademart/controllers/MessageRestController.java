@@ -62,11 +62,22 @@ public class MessageRestController extends RestControllerBase {
         }
         int user1Id = json.getInt("user1_id");
         int user2Id = json.getInt("user2_id");
-        User user1 = userController.getUserFromDB(user1Id);
+        User user1;
+        User user2;
+        try {
+            user1 = userController.getUserFromDB(user1Id);
+            user2 = userController.getUserFromDB(user2Id);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if(user1 == null){
             return createBadRequestResponse("MessageRestController#sendChatMapping()", "no user with user1_id found");
         }
-        User user2 = userController.getUserFromDB(user2Id);
         if(user2 == null){
             return createBadRequestResponse("MessageRestController#sendChatMapping()", "no user with user2_id found");
         }
@@ -140,11 +151,22 @@ public class MessageRestController extends RestControllerBase {
         }
         int user1Id = json.getInt("user1_id");
         int user2Id = json.getInt("user2_id");
-        User user1 = userController.getUserFromDB(user1Id);
+        User user1;
+        User user2;
+        try {
+            user1 = userController.getUserFromDB(user1Id);
+            user2 = userController.getUserFromDB(user2Id);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if(user1 == null){
             return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user1_id found");
         }
-        User user2 = userController.getUserFromDB(user2Id);
         if(user2 == null){
             return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user2_id found");
         }
@@ -183,11 +205,22 @@ public class MessageRestController extends RestControllerBase {
         } catch (JSONException e){
             return createBadRequestResponse("MessageRestController#fetchMessageIdsMapping()", "json was badly formatted");
         }
-        User user1 = userController.getUserFromDB(user1Id);
+        User user1;
+        User user2;
+        try {
+            user1 = userController.getUserFromDB(user1Id);
+            user2 = userController.getUserFromDB(user2Id);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if(user1 == null){
             return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user1_id found");
         }
-        User user2 = userController.getUserFromDB(user2Id);
         if(user2 == null){
             return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no user with user2_id found");
         }

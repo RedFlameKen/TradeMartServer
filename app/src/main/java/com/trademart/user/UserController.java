@@ -89,28 +89,22 @@ public class UserController {
         return users;
     }
 
-    public User getUserFromDB(int userID) {
+    // Logger.log("Unable to lock resources for user fetch", WARNING);
+    public User getUserFromDB(int userId) throws InterruptedException, SQLException {
         User user = null;
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            Logger.log("Unable to lock resources for user fetch", WARNING);
-        }
-
-        try {
-            ResultSet rs = dbController
-                    .execQuery("select * from users where user_id=" + userID);
-            rs.next();
+        sharedResource.lock();
+        String command = "select * from users where user_id=?";
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        ResultSet rs = prep.executeQuery();
+        if(rs.next()){
             user = new UserBuilder()
-                    .setId(rs.getInt("user_id"))
-                    .setUsername(rs.getString("username"))
-                    .setEmail(rs.getString("email"))
-                    .setVerified(rs.getBoolean("verified"))
-                    .setProfilePicturePath(rs.getString("profile_picture_path"))
-                    .build();
-        } catch (SQLException e) {
-            Logger.log("Unable to get a user from the db", WARNING);
-            e.printStackTrace();
+                .setId(rs.getInt("user_id"))
+                .setUsername(rs.getString("username"))
+                .setEmail(rs.getString("email"))
+                .setVerified(rs.getBoolean("verified"))
+                .setProfilePicturePath(rs.getString("profile_picture_path"))
+                .build();
         }
         sharedResource.unlock();
         return user;

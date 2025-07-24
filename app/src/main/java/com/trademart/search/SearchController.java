@@ -4,12 +4,12 @@ import java.util.ArrayList;
 
 import org.json.JSONObject;
 
-public class SearchController {
+public class SearchController<T extends SearchItem> {
 
-    public ArrayList<SearchItem> filter(String searchQuery, ArrayList<SearchItem> searchItems){
-        ArrayList<SearchItem> out = new ArrayList<>();
+    public ArrayList<T> filter(String searchQuery, ArrayList<T> searchItems){
+        ArrayList<T> out = new ArrayList<>();
         ArrayList<String> terms = extractTerms(searchQuery);
-        for (SearchItem item : searchItems) {
+        for (T item : searchItems) {
             for (String term : terms) {
                 if(item.getTerm().toLowerCase().contains(term.toLowerCase())){
                     if(!out.contains(item))
@@ -29,8 +29,8 @@ public class SearchController {
         return out;
     }
 
-    public ArrayList<SearchItem> sortByRelevance(ArrayList<SearchItem> searchItems){
-        ArrayList<SearchItem> items = new ArrayList<>();
+    public ArrayList<T> sortByRelevance(ArrayList<T> searchItems){
+        ArrayList<T> items = new ArrayList<>();
         items.add(searchItems.get(0));
         for (int i = 1; i < searchItems.size(); i++) {
             int addIndex = getAddIndex(items, searchItems.get(i), i);
@@ -39,7 +39,7 @@ public class SearchController {
         return items;
     }
 
-    public int getAddIndex(ArrayList<SearchItem> items, SearchItem item, int i){
+    public int getAddIndex(ArrayList<T> items, SearchItem item, int i){
         if(i <= 0){
             return 0;
         }
@@ -94,14 +94,10 @@ public class SearchController {
         return false;
     }
 
-    public JSONObject searchItemsToJSON(ArrayList<SearchItem> items){
+    public JSONObject searchItemsToJSON(ArrayList<T> items){
         JSONObject json = new JSONObject();
-        for (SearchItem searchItem : items) {
-            JSONObject itemJson = new JSONObject()
-                .put("id", searchItem.getId())
-                .put("result", searchItem.getTerm())
-                .put("relevance", searchItem.getRelPoints());
-            json.append("results", itemJson);
+        for (T searchItem : items) {
+            json.append("results", searchItem.parseJSON());
         }
         return json;
     }

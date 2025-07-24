@@ -128,13 +128,12 @@ public class PostRestController extends RestControllerBase {
                 .body(createResponse("failed", "received a bad request upon publish").toString());
         }
         int userId = json.getInt("user_id");
-        User user = userController.getUserFromDB(userId);
-        if (user == null) {
-            return ResponseEntity.ok(createResponse("failed", "no user with the given user_id was found").toString());
-        }
+        
         Post createdPost = null;
+        User user;
         try {
             createdPost = publishPost(json, userId, categories);
+            user = userController.getUserFromDB(userId);
         } catch (JSONException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
@@ -145,6 +144,9 @@ public class PostRestController extends RestControllerBase {
             sharedResource.unlock();
             e.printStackTrace();
             return internalServerErrorResponse();
+        }
+        if (user == null) {
+            return ResponseEntity.ok(createResponse("failed", "no user with the given user_id was found").toString());
         }
         return ResponseEntity.ok(createdPost.parseJSON()
                 .put("categories", categories)
@@ -231,7 +233,17 @@ public class PostRestController extends RestControllerBase {
 
     @PostMapping("/post/user/{user_id}")
     public ResponseEntity<String> fetchPostsByUser(@PathVariable("user_id") int userId, @RequestBody String loadedIds){
-        User user = userController.getUserFromDB(userId);
+        User user;
+        try {
+            user = userController.getUserFromDB(userId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if(user == null){
             return ResponseEntity.notFound().build();
         }
@@ -289,6 +301,7 @@ public class PostRestController extends RestControllerBase {
                 }
             }
         }
+        command.append(" order by date_posted desc");
         // command.append(" limit 8");
         Logger.log("command was: " + command, LogLevel.INFO);
         return command.toString();

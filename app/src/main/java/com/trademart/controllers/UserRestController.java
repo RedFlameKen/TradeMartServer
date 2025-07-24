@@ -3,13 +3,9 @@ package com.trademart.controllers;
 import static com.trademart.util.Logger.LogLevel.WARNING;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.sql.SQLException;
-import java.util.ArrayList;
-
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -143,7 +139,17 @@ public class UserRestController extends RestControllerBase {
 
     @GetMapping("/user/profile/{user_id}")
     public ResponseEntity<String> fetchUserDataMapping(@PathVariable("user_id") int userID) {
-        User user = userController.getUserFromDB(userID);
+        User user;
+        try {
+            user = userController.getUserFromDB(userID);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
 
         if (user == null) {
             return ResponseEntity.notFound().build();
@@ -173,7 +179,17 @@ public class UserRestController extends RestControllerBase {
 
     @GetMapping("/user/{user_id}/avatar")
     public ResponseEntity<byte[]> updateProfilePictureMapping(@PathVariable("user_id") int userId){
-        User user = userController.getUserFromDB(userId);
+        User user;
+        try {
+            user = userController.getUserFromDB(userId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
         if(user == null){
             return ResponseEntity.notFound().build();
         }
@@ -194,7 +210,17 @@ public class UserRestController extends RestControllerBase {
 
     @PostMapping("/user/{user_id}/avatar/update")
     public ResponseEntity<String> updateProfilePictureMapping(@PathVariable("user_id") int userId, @RequestHeader("Content-Disposition") String dispositionStr, @RequestBody byte[] content){
-        User user = userController.getUserFromDB(userId);
+        User user;
+        try {
+            user = userController.getUserFromDB(userId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if(user == null){
             return ResponseEntity.notFound().build();
         }

@@ -6,8 +6,9 @@ import java.util.ArrayList;
 import org.json.JSONObject;
 
 import com.trademart.feed.FeedCategory;
+import com.trademart.search.SearchIndexable;
 
-public class Post {
+public class Post implements SearchIndexable {
 
     private int postId;
     private int userId;
@@ -150,6 +151,25 @@ public class Post {
             return new Post(this);
         }
 
+    }
+
+    @Override
+    public int getIndexId() {
+        return postId;
+    }
+
+    @Override
+    public String getKeyTerm() {
+        return title;
+    }
+
+    @Override
+    public JSONObject getIndexJson(double relPoints) {
+        return new JSONObject()
+            .put("result", title)
+            .put("id", postId)
+            .put("relevance", relPoints)
+            .put("entity", parseJSON());
     }
 
 }

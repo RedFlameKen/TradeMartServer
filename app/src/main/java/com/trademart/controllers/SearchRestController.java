@@ -14,6 +14,7 @@ import com.trademart.job.JobController;
 import com.trademart.job.JobListing;
 import com.trademart.post.Post;
 import com.trademart.post.PostController;
+import com.trademart.search.MediaSearchItem;
 import com.trademart.search.SearchController;
 import com.trademart.search.SearchItem;
 import com.trademart.service.Service;
@@ -29,7 +30,6 @@ public class SearchRestController extends RestControllerBase {
     private ServiceController serviceController;
     private JobController jobController;
     private PostController postController;
-    private SearchController searchController;
 
     public SearchRestController(SharedResource sharedResource) {
         this.sharedResource = sharedResource;
@@ -37,7 +37,6 @@ public class SearchRestController extends RestControllerBase {
         serviceController = new ServiceController(sharedResource);
         jobController = new JobController(sharedResource);
         postController = new PostController(sharedResource);
-        searchController = new SearchController();
     }
 
     @GetMapping("/search/user")
@@ -57,6 +56,7 @@ public class SearchRestController extends RestControllerBase {
             e.printStackTrace();
             return internalServerErrorResponse();
         }
+        SearchController<SearchItem> searchController = new SearchController<>();
         ArrayList<SearchItem> items = searchController.filter(query, userSearchItems(users));
         JSONObject responseJson = searchController.searchItemsToJSON(items);
         return ResponseEntity.ok(createResponse("success", "fetched results")
@@ -65,6 +65,7 @@ public class SearchRestController extends RestControllerBase {
 
     @GetMapping("/search/service")
     public ResponseEntity<String> searchServiceMapping(@RequestParam(required = false, name = "query") String query){
+        SearchController<MediaSearchItem> searchController = new SearchController<>();
         if(query == null || query.equals("")){
             return ResponseEntity.ok(createResponse("success", "no search")
                     .put("data", new JSONObject()).toString());
@@ -81,7 +82,17 @@ public class SearchRestController extends RestControllerBase {
             return internalServerErrorResponse();
         }
 
-        ArrayList<SearchItem> items = searchController.filter(query, serviceSearchItems(services));
+        ArrayList<MediaSearchItem> items;
+        try {
+            items = searchController.filter(query, serviceSearchItems(services));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         JSONObject responseJson = searchController.searchItemsToJSON(items);
         return ResponseEntity.ok(createResponse("success", "fetched results")
                 .put("data", responseJson).toString());
@@ -89,6 +100,7 @@ public class SearchRestController extends RestControllerBase {
 
     @GetMapping("/search/job")
     public ResponseEntity<String> searchJobMapping(@RequestParam(required = false, name = "query") String query){
+        SearchController<MediaSearchItem> searchController = new SearchController<>();
         if(query == null || query.equals("")){
             return ResponseEntity.ok(createResponse("success", "no search")
                     .put("data", new JSONObject()).toString());
@@ -105,7 +117,17 @@ public class SearchRestController extends RestControllerBase {
             return internalServerErrorResponse();
         }
 
-        ArrayList<SearchItem> items = searchController.filter(query, jobSearchItems(jobs));
+        ArrayList<MediaSearchItem> items;
+        try {
+            items = searchController.filter(query, jobSearchItems(jobs));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         JSONObject responseJson = searchController.searchItemsToJSON(items);
         return ResponseEntity.ok(createResponse("success", "fetched results")
                 .put("data", responseJson).toString());
@@ -113,6 +135,7 @@ public class SearchRestController extends RestControllerBase {
 
     @GetMapping("/search/post")
     public ResponseEntity<String> searchPostMapping(@RequestParam(required = false, name = "query") String query){
+        SearchController<MediaSearchItem> searchController = new SearchController<>();
         if(query == null || query.equals("")){
             return ResponseEntity.ok(createResponse("success", "no search")
                     .put("data", new JSONObject()).toString());
@@ -129,7 +152,17 @@ public class SearchRestController extends RestControllerBase {
             return internalServerErrorResponse();
         }
 
-        ArrayList<SearchItem> items = searchController.filter(query, postSearchItems(posts));
+        ArrayList<MediaSearchItem> items;
+        try {
+            items = searchController.filter(query, postSearchItems(posts));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         JSONObject responseJson = searchController.searchItemsToJSON(items);
         return ResponseEntity.ok(createResponse("success", "fetched results")
                 .put("data", responseJson).toString());
@@ -138,31 +171,37 @@ public class SearchRestController extends RestControllerBase {
     private ArrayList<SearchItem> userSearchItems(ArrayList<User> users){
         ArrayList<SearchItem> items = new ArrayList<>();
         for (User user : users) {
-            items.add(new SearchItem(user.getId(), user.getUsername()));
+            items.add(new SearchItem(user));
         }
         return items;
     }
 
-    private ArrayList<SearchItem> serviceSearchItems(ArrayList<Service> services){
-        ArrayList<SearchItem> items = new ArrayList<>();
+    private ArrayList<MediaSearchItem> serviceSearchItems(ArrayList<Service> services) throws SQLException, InterruptedException{
+        ArrayList<MediaSearchItem> items = new ArrayList<>();
         for (Service service : services) {
-            items.add(new SearchItem(service.getServiceId(), service.getServiceTitle()));
+            ArrayList<Integer> mediaIds = serviceController.getServiceMediaIDs(service.getServiceId());
+            User user = userController.getUserFromDB(service.getOwnerId());
+            items.add(new MediaSearchItem(service, mediaIds, user));
         }
         return items;
     }
 
-    private ArrayList<SearchItem> jobSearchItems(ArrayList<JobListing> jobs){
-        ArrayList<SearchItem> items = new ArrayList<>();
+    private ArrayList<MediaSearchItem> jobSearchItems(ArrayList<JobListing> jobs) throws SQLException, InterruptedException{
+        ArrayList<MediaSearchItem> items = new ArrayList<>();
         for (JobListing job : jobs) {
-            items.add(new SearchItem(job.getId(), job.getTitle()));
+            ArrayList<Integer> mediaIds = jobController.getJobMediaIDs(job.getId());
+            User user = userController.getUserFromDB(job.getEmployerId());
+            items.add(new MediaSearchItem(job, mediaIds, user));
         }
         return items;
     }
 
-    private ArrayList<SearchItem> postSearchItems(ArrayList<Post> posts){
-        ArrayList<SearchItem> items = new ArrayList<>();
+    private ArrayList<MediaSearchItem> postSearchItems(ArrayList<Post> posts) throws SQLException, InterruptedException{
+        ArrayList<MediaSearchItem> items = new ArrayList<>();
         for (Post post : posts) {
-            items.add(new SearchItem(post.getPostId(), post.getTitle()));
+            ArrayList<Integer> mediaIds = postController.getPostMediaIDs(post.getPostId());
+            User user = userController.getUserFromDB(post.getUserId());
+            items.add(new MediaSearchItem(post, mediaIds, user));
         }
         return items;
     }

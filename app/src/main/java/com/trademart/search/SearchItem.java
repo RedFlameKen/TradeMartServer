@@ -1,14 +1,14 @@
 package com.trademart.search;
 
+import org.json.JSONObject;
+
 public class SearchItem {
 
-    private int id;
-    private String term;
     private double relPoints;
+    private SearchIndexable indexable;
 
-    public SearchItem(int id, String term) {
-        this.id = id;
-        this.term = term;
+    public SearchItem(SearchIndexable indexable) {
+        this.indexable = indexable;
         relPoints = 0;
     }
 
@@ -25,15 +25,19 @@ public class SearchItem {
     }
 
     public int getId() {
-        return id;
+        return indexable.getIndexId();
     }
 
     public String getTerm() {
-        return term;
+        return indexable.getKeyTerm();
     }
 
     public double getRelPoints() {
         return relPoints;
+    }
+
+    public JSONObject parseJSON(){
+        return indexable.getIndexJson(relPoints);
     }
 
 }

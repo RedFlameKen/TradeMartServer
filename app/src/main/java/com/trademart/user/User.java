@@ -1,6 +1,10 @@
 package com.trademart.user;
 
-public class User {
+import org.json.JSONObject;
+
+import com.trademart.search.SearchIndexable;
+
+public class User implements SearchIndexable {
 
     private int id;
     private String name;
@@ -58,6 +62,14 @@ public class User {
 
     public String getProfilePicturePath() {
         return profilePicturePath;
+    }
+
+    public JSONObject parseJson(){
+        return new JSONObject()
+            .put("id", id)
+            .put("username", username)
+            .put("email", email)
+            .put("verified", verified);
     }
 
     public static class UserBuilder {
@@ -125,6 +137,25 @@ public class User {
             return new User(this);
         }
 
+    }
+
+    @Override
+    public int getIndexId() {
+        return id;
+    }
+
+    @Override
+    public String getKeyTerm() {
+        return username;
+    }
+
+    @Override
+    public JSONObject getIndexJson(double relPoints) {
+        return new JSONObject()
+            .put("result", username)
+            .put("id", id)
+            .put("relevance", relPoints)
+            .put("entity", parseJson());
     }
 
 }
