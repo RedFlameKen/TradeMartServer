@@ -3,6 +3,7 @@ package com.trademart.controllers;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import org.json.JSONArray;
@@ -23,6 +24,7 @@ import com.trademart.async.SharedResource;
 import com.trademart.feed.FeedCategory;
 import com.trademart.job.JobController;
 import com.trademart.job.JobListing;
+import com.trademart.job.JobTransaction;
 import com.trademart.media.MediaController;
 import com.trademart.user.User;
 import com.trademart.user.UserController;
@@ -200,4 +202,209 @@ public class JobRestController extends RestControllerBase {
                 .toString())
             .body(createResponse("success", "image uploaded successfully").toString());
     }
+
+    @PostMapping("/jobs/{job_id}/liked")
+    public ResponseEntity<String> checkIfUserLikedPost(@PathVariable("job_id") int jobId, @RequestBody String body){
+        int userId = -1;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            userId = json.getInt("user_id");
+        } catch (JSONException e) {
+            return badRequestResponse("client sent a bad request");
+        }
+        boolean hasLiked = false;
+        try {
+            hasLiked = jobController.userHasLiked(userId, jobId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "request sent")
+                .put("data", new JSONObject()
+                    .put("has_liked", hasLiked)).toString());
+    }
+
+    @PostMapping("/jobs/{job_id}/apply")
+    public ResponseEntity<String> applyForJobMapping(@PathVariable("job_id") int jobId, @RequestBody String body){
+        int employeeId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            employeeId = json.getInt("employee_id");
+        } catch (JSONException e){
+            e.printStackTrace();
+            return badRequestResponse("invalid request");
+        }
+
+        JobTransaction transaction;
+        try {
+            JobListing job = jobController.findJobByID(jobId);
+            transaction = new JobTransaction.Builder()
+                .setJobId(jobId)
+                .setEmployeeId(employeeId)
+                .setEmployerId(job.getEmployerId())
+                .build();
+            jobController.writeJobTransactionToDB(transaction);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+
+        return ResponseEntity.ok(createResponse("success", "appliation sent!")
+                .put("data", transaction.parseJSON()).toString());
+    }
+
+    @PostMapping("/jobs/hire")
+    public ResponseEntity<String> acceptApplicationMapping(@RequestBody String body){
+        int transactionId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            transactionId = json.getInt("transaction_id");
+        } catch (JSONException e){
+            e.printStackTrace();
+            return badRequestResponse("invalid request");
+        }
+
+        JobTransaction transaction;
+        try {
+            transaction = jobController.findJobTransactionById(transactionId);
+            if(transaction == null){
+                return notFoundResponse();
+            }
+            jobController.startJob(transaction);
+            transaction = jobController.findJobTransactionById(transactionId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "application accepted")
+                .put("data", transaction.parseJSON()).toString());
+    }
+
+    @PostMapping("/jobs/complete")
+    public ResponseEntity<String> completeJobMapping(@RequestBody String body){
+        int transactionId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            transactionId = json.getInt("transaction_id");
+        } catch (JSONException e){
+            e.printStackTrace();
+            return badRequestResponse("invalid request");
+        }
+        JobTransaction transaction;
+        try {
+            transaction = jobController.findJobTransactionById(transactionId);
+            if(transaction == null){
+                return notFoundResponse();
+            }
+            jobController.markJobTransactionCompleted(transactionId);
+            transaction = jobController.findJobTransactionById(transactionId);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        // TODO: something about the payment messages
+        return ResponseEntity.ok(createResponse("success", "job completed!")
+                .put("data", transaction.parseJSON()).toString());
+    }
+
+    @PostMapping("/jobs/applications")
+    public ResponseEntity<String> fetchApplicationsMapping(@RequestBody String body){
+        int employeeId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            employeeId = json.getInt("employeeId");
+        } catch (JSONException e){
+            e.printStackTrace();
+            return badRequestResponse("invalid request");
+        }
+        JSONObject response = new JSONObject();
+        try {
+            JSONArray appsJson = new JSONArray();
+            ArrayList<JobTransaction> applications = jobController.getAllJobTransactionsByEmployeeId(employeeId);
+            for (JobTransaction application : applications) {
+                appsJson.put(application.parseJSON());
+            }
+            response.put("applications", appsJson);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "fetched applicatiosn")
+                .put("data", response).toString());
+    }
+
+
+    @PostMapping("/jobs/hirings")
+    public ResponseEntity<String> fetchReceivedApplicationsMapping(@RequestBody String body){
+        int employerId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            employerId = json.getInt("employer_id");
+        } catch (JSONException e){
+            e.printStackTrace();
+            return badRequestResponse("invalid request");
+        }
+        JSONObject response = new JSONObject();
+        try {
+            JSONArray appsJson = new JSONArray();
+            ArrayList<JobTransaction> hirings = jobController.getAllJobTransactionsByEmployerId(employerId);
+            for (JobTransaction hiring : hirings) {
+                appsJson.put(hiring.parseJSON());
+            }
+            response.put("hirings", appsJson);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "fetched hirings")
+                .put("data", response).toString());
+    }
+
+    @GetMapping("/jobs/user/{user_id}/completedjobs")
+    public ResponseEntity<String> fetchUserCompletedJobs(@PathVariable("user_id") int userId){
+        JSONObject data = new JSONObject();
+        try {
+             ArrayList<JobTransaction> completedJobs = jobController.getUserCompletedJobs(userId);
+             JSONArray json = new JSONArray();
+             for (JobTransaction jobTransaction : completedJobs) {
+                 json.put(jobTransaction.parseJSON());
+             }
+             data.put("completed_jobs", json);
+
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "fetched completed jobs")
+                .put("data", data).toString());
+    }
+
 }

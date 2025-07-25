@@ -172,6 +172,7 @@ public class PostController {
                     .setUserId(rs.getInt("user_id"))
                     .setTitle(rs.getString("title"))
                     .setDescription(rs.getString("description"))
+                    .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
                     .setLikes(rs.getInt("likes"))
                     .build());
         }

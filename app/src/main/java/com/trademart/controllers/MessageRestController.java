@@ -3,6 +3,7 @@ package com.trademart.controllers;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -147,6 +148,7 @@ public class MessageRestController extends RestControllerBase {
         try {
             json = new JSONObject(new JSONTokener(body));
         } catch (JSONException e){
+            e.printStackTrace();
             return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "json was badly formatted");
         }
         int user1Id = json.getInt("user1_id");
@@ -174,7 +176,8 @@ public class MessageRestController extends RestControllerBase {
         try {
             Convo convo = messageController.findConvoByUserIds(user1Id, user2Id);
             if(convo == null){
-                return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no convo found with user1_id and user2_id found");
+                convo = messageController.initConvo(user1Id, user2Id);
+                // return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no convo found with user1_id and user2_id found");
             }
             int receivedCount = json.getInt("received_count");
             ArrayList<Chat> chats = messageController.getChatsInConvo(convo.getConvoId(), receivedCount,
@@ -299,6 +302,7 @@ public class MessageRestController extends RestControllerBase {
 
     public JSONObject chatArrayToJSON(ArrayList<Chat> chats) throws InterruptedException, SQLException{
         JSONObject json = new JSONObject();
+        JSONArray arr = new JSONArray();
         for (Chat chat : chats) {
             JSONObject chatJson = new JSONObject()
                 .put("chat_id", chat.getChatId())
@@ -317,8 +321,10 @@ public class MessageRestController extends RestControllerBase {
                     chatJson = expoundPaymentChatJson((PaymentChat)chat);
                     break;
             }
-            json.append("chats", chatJson);
+            arr.put(chatJson);
+            // json.append("chats", chatJson);
         }
+        json.put("chats", arr);
         return json;
     }
 

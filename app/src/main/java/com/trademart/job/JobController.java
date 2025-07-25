@@ -36,6 +36,17 @@ public class JobController {
         return id;
     }
 
+    public int generateJobTransactionID() {
+        try {
+            sharedResource.lock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        int id = IDGenerator.generateDBID(sharedResource.getDatabaseController(), "job_transactions", "id");
+        sharedResource.unlock();
+        return id;
+    }
+
     public ArrayList<JobListing> getAllJobListingsFromDB() throws InterruptedException, SQLException{
         ArrayList<JobListing> jobs = new ArrayList<>();
         String command = "select * from job_listings";
@@ -233,6 +244,140 @@ public class JobController {
         prep.close();
         sharedResource.unlock();
         return ids;
+    }
+
+    public void writeJobTransactionToDB(JobTransaction transaction) throws InterruptedException, SQLException{
+        int generatedId = generateJobTransactionID();
+        String command = "insert into job_transactions(id, job_id, employee_id, employer_id, date_published, completed)values(?,?,?,?,?,?)";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, generatedId);
+        prep.setInt(2, transaction.getJobId());
+        prep.setInt(3, transaction.getEmployeeId());
+        prep.setInt(4, transaction.getEmployerId());
+        prep.setTimestamp(5, Timestamp.valueOf(LocalDateTime.now()));
+        prep.setBoolean(6, transaction.isCompleted());
+        prep.execute();
+
+        sharedResource.unlock();
+    }
+
+    public JobTransaction findJobTransactionById(int transactionId) throws InterruptedException, SQLException{
+        JobTransaction transaction = null;
+        String command = "select * from job_transactions where id=? order by date_published desc";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, transactionId);
+        ResultSet rs = prep.executeQuery();
+        if(rs.next()){
+            JobTransaction.Builder builder = new JobTransaction.Builder()
+                .setTransactionId(rs.getInt("id"))
+                .setJobId(rs.getInt("job_id"))
+                .setEmployeeId(rs.getInt("employee_id"))
+                .setEmployerId(rs.getInt("employer_id"))
+                .setCompleted(rs.getBoolean("completed"));
+            Timestamp dateStarted = rs.getTimestamp("date_started");
+            if(rs.wasNull())
+                builder.setDateStarted(null);
+            else 
+                builder.setDateStarted(dateStarted.toLocalDateTime());
+            Timestamp dateFinished = rs.getTimestamp("date_finished");
+            if(rs.wasNull())
+                builder.setDateFinished(null);
+            else 
+                builder.setDateFinished(dateFinished.toLocalDateTime());
+            transaction = builder.build();
+        }
+        sharedResource.unlock();
+        return transaction;
+    }
+
+    public ArrayList<JobTransaction> getAllJobTransactionsByEmployeeId(int employeeId) throws InterruptedException, SQLException{
+        ArrayList<JobTransaction> transactions = new ArrayList<>();
+        String command = "select * from job_transactions where employee_id=? order by date_published desc";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, employeeId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            transactions.add(new JobTransaction.Builder()
+                .setTransactionId(rs.getInt("id"))
+                .setJobId(rs.getInt("job_id"))
+                .setEmployeeId(rs.getInt("employee_id"))
+                .setEmployerId(rs.getInt("employer_id"))
+                .setDateStarted(rs.getTimestamp("date_started").toLocalDateTime())
+                .setDateFinished(rs.getTimestamp("date_finished").toLocalDateTime())
+                .setCompleted(rs.getBoolean("completed"))
+                .build());
+        }
+        sharedResource.unlock();
+        return transactions;
+    }
+
+    public ArrayList<JobTransaction> getAllJobTransactionsByEmployerId(int employerId) throws InterruptedException, SQLException{
+        ArrayList<JobTransaction> transactions = new ArrayList<>();
+        String command = "select * from job_transactions where employer_id=? order by date_published desc";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, employerId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            transactions.add(new JobTransaction.Builder()
+                .setTransactionId(rs.getInt("id"))
+                .setJobId(rs.getInt("job_id"))
+                .setEmployeeId(rs.getInt("employee_id"))
+                .setEmployerId(rs.getInt("employer_id"))
+                .setDateStarted(rs.getTimestamp("date_started").toLocalDateTime())
+                .setDateFinished(rs.getTimestamp("date_finished").toLocalDateTime())
+                .setCompleted(rs.getBoolean("completed"))
+                .build());
+        }
+        sharedResource.unlock();
+        return transactions;
+    }
+
+    public void startJob(JobTransaction transaction) throws InterruptedException, SQLException{
+        String command = "update job_transactions set date_started=? where id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
+        prep.setInt(2, transaction.getTransactionId());
+        prep.execute();
+        sharedResource.unlock();
+    }
+
+    public void markJobTransactionCompleted(int transactionId) throws InterruptedException, SQLException{
+        String command = "update job_transactions set completed=?, date_finished=? where id=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setBoolean(1, true);
+        prep.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+        prep.setInt(3, transactionId);
+        prep.execute();
+        sharedResource.unlock();
+    }
+
+    public ArrayList<JobTransaction> getUserCompletedJobs(int userId) throws InterruptedException, SQLException{
+        ArrayList<JobTransaction> jobs = new ArrayList<>();
+        String command = "select * from job_transactions where employee_id=? and completed=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setBoolean(2, true);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            jobs.add(new JobTransaction.Builder()
+                    .setTransactionId(rs.getInt("id"))
+                    .setJobId(rs.getInt("job_id"))
+                    .setEmployeeId(userId)
+                    .setEmployerId(rs.getInt("employer_id"))
+                    .setDateStarted(rs.getTimestamp("date_started").toLocalDateTime())
+                    .setDateFinished(rs.getTimestamp("date_finished").toLocalDateTime())
+                    .setCompleted(rs.getBoolean("completed"))
+                    .build());
+        }
+        sharedResource.unlock();
+        return jobs;
     }
 
 }

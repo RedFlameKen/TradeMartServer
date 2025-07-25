@@ -273,6 +273,31 @@ public class PostRestController extends RestControllerBase {
         return ResponseEntity.ok(newIdsJson.toString());
     }
 
+    @PostMapping("/post/{post_id}/liked")
+    public ResponseEntity<String> checkIfUserLikedPost(@PathVariable("post_id") int postId, @RequestBody String body){
+        int userId = -1;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            userId = json.getInt("user_id");
+        } catch (JSONException e) {
+            return badRequestResponse("client sent a bad request");
+        }
+        boolean hasLiked = false;
+        try {
+            hasLiked = postController.userHasLiked(userId, postId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "request sent")
+                .put("data", new JSONObject()
+                    .put("has_liked", hasLiked)).toString());
+    }
+
     private ArrayList<Integer> getUnloadedPostIDs(ArrayList<Integer> loadedIds, int userId) throws SQLException, InterruptedException{
         String command = buildUnloadedPostIDsCommand(loadedIds, userId);
         ArrayList<Integer> newIds = new ArrayList<>();

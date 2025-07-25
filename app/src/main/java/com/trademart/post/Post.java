@@ -72,6 +72,7 @@ public class Post implements SearchIndexable {
             .put("title", title)
             .put("description", description)
             .put("likes", likes)
+            .put("date_posted", datePosted.toString())
             .put("post_id", postId)
             .put("user_id", userId);
         return json;

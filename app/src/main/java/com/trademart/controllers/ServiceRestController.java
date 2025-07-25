@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.springframework.http.ContentDisposition;
@@ -62,15 +63,7 @@ public class ServiceRestController extends RestControllerBase {
             return ResponseEntity.notFound().build();
         }
 
-        JSONObject json = new JSONObject()
-            .put("service_id", service.getServiceId())
-            .put("service_title", service.getServiceTitle())
-            .put("service_description", service.getServiceDescription())
-            .put("service_price", service.getServicePrice())
-            .put("service_currency", service.getServiceCurrency())
-            .put("date_posted", service.getDatePosted())
-            .put("owner_id", service.getOwnerId())
-            .put("categories", categories);
+        JSONObject json = service.parseJson().put("categories", categories);
 
         return ResponseEntity.ok(json.toString());
     }
@@ -228,4 +221,40 @@ public class ServiceRestController extends RestControllerBase {
         return service;
     }
     
+    // @PostMapping("/service/{service_id}/rate")
+    // public ResponseEntity<String> rateServiceMapping(@RequestBody String body){
+    //     int userId;
+    //     int serviceId;
+    //     try {
+    //         JSONObject json = new JSONObject(new JSONTokener(body));
+    //         userId = json.getInt("user_id");
+    //     } catch (JSONException e) {
+    //         return badRequestResponse("client sent a bad request");
+    //     }
+    // }
+    //
+    @PostMapping("/service/{service_id}/liked")
+    public ResponseEntity<String> checkIfUserLikedPost(@PathVariable("service_id") int serviceId, @RequestBody String body){
+        int userId = -1;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            userId = json.getInt("user_id");
+        } catch (JSONException e) {
+            return badRequestResponse("client sent a bad request");
+        }
+        boolean hasLiked = false;
+        try {
+            hasLiked = serviceController.userHasLiked(userId, serviceId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "request sent")
+                .put("data", new JSONObject()
+                    .put("has_liked", hasLiked)).toString());
+    }
 }

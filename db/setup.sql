@@ -82,6 +82,20 @@ create table if not exists job_listings (
     foreign key(employer_id) references users(user_id)
 );
 
+create table if not exists job_transactions (
+    id int primary key,
+    job_id int,
+    employee_id int,
+    employer_id int,
+    date_published datetime,
+    date_started datetime,
+    date_finished datetime,
+    completed boolean,
+    foreign key(job_id) references job_listings(job_id),
+    foreign key(employee_id) references users(user_id),
+    foreign key(employer_id) references users(user_id)
+);
+
 create table if not exists post_categories (
     post_id int,
     category varchar(255),

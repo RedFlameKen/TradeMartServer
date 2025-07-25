@@ -68,6 +68,7 @@ public class Service implements SearchIndexable {
             .put("date_posted", datePosted)
             .put("service_price", servicePrice)
             .put("service_currency", serviceCurrency)
+            .put("likes", likes)
             .put("owner_id", ownerId);
     }
 

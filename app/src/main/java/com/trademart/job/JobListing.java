@@ -64,6 +64,7 @@ public class JobListing implements SearchIndexable {
             .put("job_title", title)
             .put("job_description", description)
             .put("amount", amount)
+            .put("likes", likes)
             .put("date_posted", datePosted)
             .put("employer_id", employerId);
     }

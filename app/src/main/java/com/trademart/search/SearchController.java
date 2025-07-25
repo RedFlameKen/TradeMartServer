@@ -2,6 +2,7 @@ package com.trademart.search;
 
 import java.util.ArrayList;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class SearchController<T extends SearchItem> {
@@ -96,9 +97,11 @@ public class SearchController<T extends SearchItem> {
 
     public JSONObject searchItemsToJSON(ArrayList<T> items){
         JSONObject json = new JSONObject();
+        JSONArray array = new JSONArray();
         for (T searchItem : items) {
-            json.append("results", searchItem.parseJSON());
+            array.put(searchItem.parseJSON());
         }
+        json.put("results", array);
         return json;
     }
 

@@ -44,6 +44,7 @@ public class ServiceController {
             .setServiceTitle(rs.getString("service_title"))
             .setServiceDescription(rs.getString("service_description"))
             .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
+            .setServicePrice(rs.getDouble("service_price"))
             .setOwnerId(rs.getInt("owner_id"))
             .setLikes(rs.getInt("likes"))
             .build();
@@ -117,6 +118,7 @@ public class ServiceController {
                 .setServiceTitle(rs.getString("service_title"))
                 .setServiceDescription(rs.getString("service_description"))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
+                .setServicePrice(rs.getDouble("service_price"))
                 .setOwnerId(rs.getInt("owner_id"))
                 .setLikes(rs.getInt("likes"))
                 .build();
@@ -137,6 +139,7 @@ public class ServiceController {
                 .setServiceTitle(rs.getString("service_title"))
                 .setServiceDescription(rs.getString("service_description"))
                 .setDatePosted(rs.getTimestamp("date_posted").toLocalDateTime())
+                .setServicePrice(rs.getDouble("service_price"))
                 .setOwnerId(rs.getInt("owner_id"))
                 .setLikes(rs.getInt("likes"))
                 .build();
