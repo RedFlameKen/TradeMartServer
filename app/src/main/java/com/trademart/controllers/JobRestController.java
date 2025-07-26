@@ -376,6 +376,9 @@ public class JobRestController extends RestControllerBase {
             JSONArray appsJson = new JSONArray();
             ArrayList<JobTransaction> applications = jobController.getAllJobTransactionsByEmployeeId(employeeId);
             for (JobTransaction application : applications) {
+                if(application.getDateStarted() != null || application.isCompleted()){
+                    continue;
+                }
                 String employerUsername = userController.getUserFromDB(application.getEmployerId()).getUsername();
                 String employeeUsername = userController.getUserFromDB(application.getEmployeeId()).getUsername();
                 String jobTitle = jobController.findJobByID(application.getJobId()).getTitle();

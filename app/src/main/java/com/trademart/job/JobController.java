@@ -424,7 +424,7 @@ public class JobController {
             jobs.add(builder
                     .setTransactionId(rs.getInt("id"))
                     .setJobId(rs.getInt("job_id"))
-                    .setEmployeeId(userId)
+                    .setEmployeeId(rs.getInt("employee_id"))
                     .setEmployerId(rs.getInt("employer_id"))
                     .setCompleted(rs.getBoolean("completed"))
                     .build());
@@ -463,7 +463,7 @@ public class JobController {
             jobs.add(builder
                     .setTransactionId(rs.getInt("id"))
                     .setJobId(rs.getInt("job_id"))
-                    .setEmployeeId(userId)
+                    .setEmployeeId(rs.getInt("employee_id"))
                     .setEmployerId(rs.getInt("employer_id"))
                     .setCompleted(rs.getBoolean("completed"))
                     .build());
