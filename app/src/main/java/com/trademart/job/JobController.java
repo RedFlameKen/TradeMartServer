@@ -300,13 +300,20 @@ public class JobController {
         prep.setInt(1, employeeId);
         ResultSet rs = prep.executeQuery();
         while(rs.next()){
-            transactions.add(new JobTransaction.Builder()
+            JobTransaction.Builder builder = new JobTransaction.Builder();
+            Timestamp dateStarted = rs.getTimestamp("date_started");
+            if(!rs.wasNull()){
+                builder.setDateStarted(dateStarted.toLocalDateTime());
+            }
+            Timestamp dateFinished = rs.getTimestamp("date_finished");
+            if(!rs.wasNull()){
+                builder.setDateFinished(dateFinished.toLocalDateTime());
+            }
+            transactions.add(builder
                 .setTransactionId(rs.getInt("id"))
                 .setJobId(rs.getInt("job_id"))
                 .setEmployeeId(rs.getInt("employee_id"))
                 .setEmployerId(rs.getInt("employer_id"))
-                .setDateStarted(rs.getTimestamp("date_started").toLocalDateTime())
-                .setDateFinished(rs.getTimestamp("date_finished").toLocalDateTime())
                 .setCompleted(rs.getBoolean("completed"))
                 .build());
         }
@@ -322,13 +329,20 @@ public class JobController {
         prep.setInt(1, employerId);
         ResultSet rs = prep.executeQuery();
         while(rs.next()){
-            transactions.add(new JobTransaction.Builder()
+            JobTransaction.Builder builder = new JobTransaction.Builder();
+            Timestamp dateStarted = rs.getTimestamp("date_started");
+            if(!rs.wasNull()){
+                builder.setDateStarted(dateStarted.toLocalDateTime());
+            }
+            Timestamp dateFinished = rs.getTimestamp("date_finished");
+            if(!rs.wasNull()){
+                builder.setDateFinished(dateFinished.toLocalDateTime());
+            }
+            transactions.add(builder
                 .setTransactionId(rs.getInt("id"))
                 .setJobId(rs.getInt("job_id"))
                 .setEmployeeId(rs.getInt("employee_id"))
                 .setEmployerId(rs.getInt("employer_id"))
-                .setDateStarted(rs.getTimestamp("date_started").toLocalDateTime())
-                .setDateFinished(rs.getTimestamp("date_finished").toLocalDateTime())
                 .setCompleted(rs.getBoolean("completed"))
                 .build());
         }
@@ -366,13 +380,20 @@ public class JobController {
         prep.setBoolean(2, true);
         ResultSet rs = prep.executeQuery();
         while(rs.next()){
+            JobTransaction.Builder builder = new JobTransaction.Builder();
+            Timestamp dateStarted = rs.getTimestamp("date_started");
+            if(!rs.wasNull()){
+                builder.setDateStarted(dateStarted.toLocalDateTime());
+            }
+            Timestamp dateFinished = rs.getTimestamp("date_finished");
+            if(!rs.wasNull()){
+                builder.setDateFinished(dateFinished.toLocalDateTime());
+            }
             jobs.add(new JobTransaction.Builder()
                     .setTransactionId(rs.getInt("id"))
                     .setJobId(rs.getInt("job_id"))
                     .setEmployeeId(userId)
                     .setEmployerId(rs.getInt("employer_id"))
-                    .setDateStarted(rs.getTimestamp("date_started").toLocalDateTime())
-                    .setDateFinished(rs.getTimestamp("date_finished").toLocalDateTime())
                     .setCompleted(rs.getBoolean("completed"))
                     .build());
         }
@@ -380,4 +401,74 @@ public class JobController {
         return jobs;
     }
 
+    public ArrayList<JobTransaction> getCompletedJobTransactions(int userId) throws InterruptedException, SQLException{
+        ArrayList<JobTransaction> jobs = new ArrayList<>();
+        String command = "select * from job_transactions where employee_id=? and completed=? or employer_id=? and completed=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setBoolean(2, true);
+        prep.setInt(3, userId);
+        prep.setBoolean(4, true);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            JobTransaction.Builder builder = new JobTransaction.Builder();
+            Timestamp dateStarted = rs.getTimestamp("date_started");
+            if(!rs.wasNull()){
+                builder.setDateStarted(dateStarted.toLocalDateTime());
+            }
+            Timestamp dateFinished = rs.getTimestamp("date_finished");
+            if(!rs.wasNull()){
+                builder.setDateFinished(dateFinished.toLocalDateTime());
+            }
+            jobs.add(builder
+                    .setTransactionId(rs.getInt("id"))
+                    .setJobId(rs.getInt("job_id"))
+                    .setEmployeeId(userId)
+                    .setEmployerId(rs.getInt("employer_id"))
+                    .setCompleted(rs.getBoolean("completed"))
+                    .build());
+        }
+        sharedResource.unlock();
+        return jobs;
+    }
+
+    public ArrayList<JobTransaction> getActiveJobTransactions(int userId) throws InterruptedException, SQLException{
+        ArrayList<JobTransaction> jobs = new ArrayList<>();
+        String command = "select * from job_transactions where employee_id=? and completed=? or employer_id=? and completed=?";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, userId);
+        prep.setBoolean(2, false);
+        prep.setInt(3, userId);
+        prep.setBoolean(4, false);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            JobTransaction.Builder builder = new JobTransaction.Builder();
+            Timestamp dateStarted = rs.getTimestamp("date_started");
+            boolean startedNull = false;
+            boolean finishedNull = false;
+            if(!rs.wasNull()){
+                startedNull = true;
+                builder.setDateStarted(dateStarted.toLocalDateTime());
+            }
+            Timestamp dateFinished = rs.getTimestamp("date_finished");
+            if(!rs.wasNull()){
+                finishedNull = true;
+                builder.setDateFinished(dateFinished.toLocalDateTime());
+            }
+            if(!(startedNull && !finishedNull)){
+                continue;
+            }
+            jobs.add(builder
+                    .setTransactionId(rs.getInt("id"))
+                    .setJobId(rs.getInt("job_id"))
+                    .setEmployeeId(userId)
+                    .setEmployerId(rs.getInt("employer_id"))
+                    .setCompleted(rs.getBoolean("completed"))
+                    .build());
+        }
+        sharedResource.unlock();
+        return jobs;
+    }
 }

@@ -323,12 +323,50 @@ public class JobRestController extends RestControllerBase {
                 .put("data", transaction.parseJSON()).toString());
     }
 
+    @PostMapping("/jobs/active")
+    public ResponseEntity<String> fetchActiveJobsRelatedToUseIdMapping(@RequestBody String body){
+        int userId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            userId = json.getInt("user_id");
+        } catch (JSONException e){
+            e.printStackTrace();
+            return badRequestResponse("invalid request");
+        }
+        JSONObject response = new JSONObject();
+        try {
+            JSONArray appsJson = new JSONArray();
+            ArrayList<JobTransaction> activeJobs = jobController.getActiveJobTransactions(userId);
+            for (JobTransaction activeJob : activeJobs) {
+                String employerUsername = userController.getUserFromDB(activeJob.getEmployerId()).getUsername();
+                String employeeUsername = userController.getUserFromDB(activeJob.getEmployeeId()).getUsername();
+                String jobTitle = jobController.findJobByID(activeJob.getJobId()).getTitle();
+                appsJson.put(activeJob.parseJSON()
+                        .put("employee_username", employeeUsername)
+                        .put("employer_username", employerUsername)
+                        .put("job_title", jobTitle)
+                        .put("type", userId == activeJob.getEmployeeId() ?
+                            "APPLICATION" : "HIRING"));
+            }
+            response.put("active_jobs", appsJson);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "fetched active jobs")
+                .put("data", response).toString());
+    }
+
     @PostMapping("/jobs/applications")
     public ResponseEntity<String> fetchApplicationsMapping(@RequestBody String body){
         int employeeId;
         try {
             JSONObject json = new JSONObject(new JSONTokener(body));
-            employeeId = json.getInt("employeeId");
+            employeeId = json.getInt("employee_id");
         } catch (JSONException e){
             e.printStackTrace();
             return badRequestResponse("invalid request");
@@ -338,7 +376,13 @@ public class JobRestController extends RestControllerBase {
             JSONArray appsJson = new JSONArray();
             ArrayList<JobTransaction> applications = jobController.getAllJobTransactionsByEmployeeId(employeeId);
             for (JobTransaction application : applications) {
-                appsJson.put(application.parseJSON());
+                String employerUsername = userController.getUserFromDB(application.getEmployerId()).getUsername();
+                String employeeUsername = userController.getUserFromDB(application.getEmployeeId()).getUsername();
+                String jobTitle = jobController.findJobByID(application.getJobId()).getTitle();
+                appsJson.put(application.parseJSON()
+                        .put("employee_username", employeeUsername)
+                        .put("employer_username", employerUsername)
+                        .put("job_title", jobTitle));
             }
             response.put("applications", appsJson);
         } catch (InterruptedException e) {
@@ -369,7 +413,16 @@ public class JobRestController extends RestControllerBase {
             JSONArray appsJson = new JSONArray();
             ArrayList<JobTransaction> hirings = jobController.getAllJobTransactionsByEmployerId(employerId);
             for (JobTransaction hiring : hirings) {
-                appsJson.put(hiring.parseJSON());
+                if(hiring.getDateStarted() != null || hiring.isCompleted()){
+                    continue;
+                }
+                String employerUsername = userController.getUserFromDB(hiring.getEmployerId()).getUsername();
+                String employeeUsername = userController.getUserFromDB(hiring.getEmployeeId()).getUsername();
+                String jobTitle = jobController.findJobByID(hiring.getJobId()).getTitle();
+                appsJson.put(hiring.parseJSON()
+                        .put("employee_username", employeeUsername)
+                        .put("employer_username", employerUsername)
+                        .put("job_title", jobTitle));
             }
             response.put("hirings", appsJson);
         } catch (InterruptedException e) {
@@ -381,6 +434,46 @@ public class JobRestController extends RestControllerBase {
             return internalServerErrorResponse();
         }
         return ResponseEntity.ok(createResponse("success", "fetched hirings")
+                .put("data", response).toString());
+    }
+
+    // Ken: I hate super long class names
+    // Also ken:
+    @PostMapping("/jobs/completed")
+    public ResponseEntity<String> fetchCompletedJobsRelatedToUseIdMapping(@RequestBody String body){
+        int userId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            userId = json.getInt("user_id");
+        } catch (JSONException e){
+            e.printStackTrace();
+            return badRequestResponse("invalid request");
+        }
+        JSONObject response = new JSONObject();
+        try {
+            JSONArray appsJson = new JSONArray();
+            ArrayList<JobTransaction> completedTransactions = jobController.getCompletedJobTransactions(userId);
+            for (JobTransaction completedTransaction : completedTransactions) {
+                String employerUsername = userController.getUserFromDB(completedTransaction.getEmployerId()).getUsername();
+                String employeeUsername = userController.getUserFromDB(completedTransaction.getEmployeeId()).getUsername();
+                String jobTitle = jobController.findJobByID(completedTransaction.getJobId()).getTitle();
+                appsJson.put(completedTransaction.parseJSON()
+                        .put("employee_username", employeeUsername)
+                        .put("employer_username", employerUsername)
+                        .put("job_title", jobTitle)
+                        .put("type", userId == completedTransaction.getEmployeeId() ?
+                            "APPLICATION" : "HIRING"));
+            }
+            response.put("completed_transactions", appsJson);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(createResponse("success", "fetched completed_transactions")
                 .put("data", response).toString());
     }
 
