@@ -180,7 +180,7 @@ public class SearchRestController extends RestControllerBase {
         ArrayList<MediaSearchItem> items = new ArrayList<>();
         for (Service service : services) {
             ArrayList<Integer> mediaIds = serviceController.getServiceMediaIDs(service.getServiceId());
-            User user = userController.getUserFromDB(service.getOwnerId());
+            User user = userController.findUserById(service.getOwnerId());
             items.add(new MediaSearchItem(service, mediaIds, user));
         }
         return items;
@@ -190,7 +190,7 @@ public class SearchRestController extends RestControllerBase {
         ArrayList<MediaSearchItem> items = new ArrayList<>();
         for (JobListing job : jobs) {
             ArrayList<Integer> mediaIds = jobController.getJobMediaIDs(job.getId());
-            User user = userController.getUserFromDB(job.getEmployerId());
+            User user = userController.findUserById(job.getEmployerId());
             items.add(new MediaSearchItem(job, mediaIds, user));
         }
         return items;
@@ -200,7 +200,7 @@ public class SearchRestController extends RestControllerBase {
         ArrayList<MediaSearchItem> items = new ArrayList<>();
         for (Post post : posts) {
             ArrayList<Integer> mediaIds = postController.getPostMediaIDs(post.getPostId());
-            User user = userController.getUserFromDB(post.getUserId());
+            User user = userController.findUserById(post.getUserId());
             items.add(new MediaSearchItem(post, mediaIds, user));
         }
         return items;

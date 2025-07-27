@@ -89,7 +89,7 @@ public class ServiceRestController extends RestControllerBase {
     public ResponseEntity<String> fetchServicesByUserIdMapping(@PathVariable("user_id") int userId){
         User user;
         try {
-            user = userController.getUserFromDB(userId);
+            user = userController.findUserById(userId);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -182,7 +182,7 @@ public class ServiceRestController extends RestControllerBase {
         int ownerId = json.getInt("owner_id");
         User user;
         try {
-            user = userController.getUserFromDB(ownerId);
+            user = userController.findUserById(ownerId);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();

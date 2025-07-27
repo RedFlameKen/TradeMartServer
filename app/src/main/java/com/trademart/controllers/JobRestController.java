@@ -51,7 +51,7 @@ public class JobRestController extends RestControllerBase {
     public ResponseEntity<String> fetchJobsMapping(@PathVariable("employer_id") int employerId){
         User employer;
         try {
-            employer = userController.getUserFromDB(employerId);
+            employer = userController.findUserById(employerId);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -106,7 +106,7 @@ public class JobRestController extends RestControllerBase {
         JSONObject json = new JSONObject();
         try {
             ArrayList<Integer> ids = jobController.getJobMediaIDs(jobId);
-            json.put("job_ids", ids);
+            json.put("media_ids", ids);
         } catch (SQLException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
@@ -122,7 +122,7 @@ public class JobRestController extends RestControllerBase {
         try {
             json = new JSONObject(new JSONTokener(body));
             Logger.log("received /jobs/create json: " + json.toString(), LogLevel.INFO);
-            employer = userController.getUserFromDB(json.getInt("employer_id"));
+            employer = userController.findUserById(json.getInt("employer_id"));
             if(employer == null){
                 return notFoundResponse();
             }
@@ -338,8 +338,8 @@ public class JobRestController extends RestControllerBase {
             JSONArray appsJson = new JSONArray();
             ArrayList<JobTransaction> activeJobs = jobController.getActiveJobTransactions(userId);
             for (JobTransaction activeJob : activeJobs) {
-                String employerUsername = userController.getUserFromDB(activeJob.getEmployerId()).getUsername();
-                String employeeUsername = userController.getUserFromDB(activeJob.getEmployeeId()).getUsername();
+                String employerUsername = userController.findUserById(activeJob.getEmployerId()).getUsername();
+                String employeeUsername = userController.findUserById(activeJob.getEmployeeId()).getUsername();
                 String jobTitle = jobController.findJobByID(activeJob.getJobId()).getTitle();
                 appsJson.put(activeJob.parseJSON()
                         .put("employee_username", employeeUsername)
@@ -379,8 +379,8 @@ public class JobRestController extends RestControllerBase {
                 if(application.getDateStarted() != null || application.isCompleted()){
                     continue;
                 }
-                String employerUsername = userController.getUserFromDB(application.getEmployerId()).getUsername();
-                String employeeUsername = userController.getUserFromDB(application.getEmployeeId()).getUsername();
+                String employerUsername = userController.findUserById(application.getEmployerId()).getUsername();
+                String employeeUsername = userController.findUserById(application.getEmployeeId()).getUsername();
                 String jobTitle = jobController.findJobByID(application.getJobId()).getTitle();
                 appsJson.put(application.parseJSON()
                         .put("employee_username", employeeUsername)
@@ -419,8 +419,8 @@ public class JobRestController extends RestControllerBase {
                 if(hiring.getDateStarted() != null || hiring.isCompleted()){
                     continue;
                 }
-                String employerUsername = userController.getUserFromDB(hiring.getEmployerId()).getUsername();
-                String employeeUsername = userController.getUserFromDB(hiring.getEmployeeId()).getUsername();
+                String employerUsername = userController.findUserById(hiring.getEmployerId()).getUsername();
+                String employeeUsername = userController.findUserById(hiring.getEmployeeId()).getUsername();
                 String jobTitle = jobController.findJobByID(hiring.getJobId()).getTitle();
                 appsJson.put(hiring.parseJSON()
                         .put("employee_username", employeeUsername)
@@ -457,8 +457,8 @@ public class JobRestController extends RestControllerBase {
             JSONArray appsJson = new JSONArray();
             ArrayList<JobTransaction> completedTransactions = jobController.getCompletedJobTransactions(userId);
             for (JobTransaction completedTransaction : completedTransactions) {
-                String employerUsername = userController.getUserFromDB(completedTransaction.getEmployerId()).getUsername();
-                String employeeUsername = userController.getUserFromDB(completedTransaction.getEmployeeId()).getUsername();
+                String employerUsername = userController.findUserById(completedTransaction.getEmployerId()).getUsername();
+                String employeeUsername = userController.findUserById(completedTransaction.getEmployeeId()).getUsername();
                 String jobTitle = jobController.findJobByID(completedTransaction.getJobId()).getTitle();
                 appsJson.put(completedTransaction.parseJSON()
                         .put("employee_username", employeeUsername)
@@ -490,6 +490,7 @@ public class JobRestController extends RestControllerBase {
                  json.put(jobTransaction.parseJSON());
              }
              data.put("completed_jobs", json);
+             data.put("count", completedJobs.size());
 
         } catch (InterruptedException e) {
             sharedResource.unlock();

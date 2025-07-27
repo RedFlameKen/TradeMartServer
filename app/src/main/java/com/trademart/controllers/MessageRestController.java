@@ -1,5 +1,7 @@
 package com.trademart.controllers;
 
+import static com.trademart.util.Logger.LogLevel.INFO;
+
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -66,8 +68,8 @@ public class MessageRestController extends RestControllerBase {
         User user1;
         User user2;
         try {
-            user1 = userController.getUserFromDB(user1Id);
-            user2 = userController.getUserFromDB(user2Id);
+            user1 = userController.findUserById(user1Id);
+            user2 = userController.findUserById(user2Id);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -156,8 +158,8 @@ public class MessageRestController extends RestControllerBase {
         User user1;
         User user2;
         try {
-            user1 = userController.getUserFromDB(user1Id);
-            user2 = userController.getUserFromDB(user2Id);
+            user1 = userController.findUserById(user1Id);
+            user2 = userController.findUserById(user2Id);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -211,8 +213,8 @@ public class MessageRestController extends RestControllerBase {
         User user1;
         User user2;
         try {
-            user1 = userController.getUserFromDB(user1Id);
-            user2 = userController.getUserFromDB(user2Id);
+            user1 = userController.findUserById(user1Id);
+            user2 = userController.findUserById(user2Id);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -259,11 +261,15 @@ public class MessageRestController extends RestControllerBase {
         try {
             ArrayList<Convo> convos = messageController.findConvosByUserId(userId);
             for (Convo convo : convos) {
-                User user1 = userController.getUserFromDB(convo.getUser1Id());
-                User user2 = userController.getUserFromDB(convo.getUser2Id());
+                User user1 = userController.findUserById(convo.getUser1Id());
+                User user2 = userController.findUserById(convo.getUser2Id());
                 int secondUserId = userId == user1.getId() ? user2.getId() : user1.getId();
                 String username = userId == user1.getId() ? user2.getUsername() : user1.getUsername();
                 Chat lastChat = messageController.getLastChat(convo.getConvoId());
+                if(lastChat == null){
+                    Logger.log("null chat between " + user1.getUsername() + " and " + user2.getUsername(), INFO);
+                    continue;
+                }
                 JSONObject chatJson = null;
                 if(lastChat instanceof MediaChat){
                     chatJson = ((MediaChat)lastChat).parseJson();

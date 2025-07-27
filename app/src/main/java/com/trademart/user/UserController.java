@@ -90,7 +90,7 @@ public class UserController {
     }
 
     // Logger.log("Unable to lock resources for user fetch", WARNING);
-    public User getUserFromDB(int userId) throws InterruptedException, SQLException {
+    public User findUserById(int userId) throws InterruptedException, SQLException {
         User user = null;
         sharedResource.lock();
         String command = "select * from users where user_id=?";

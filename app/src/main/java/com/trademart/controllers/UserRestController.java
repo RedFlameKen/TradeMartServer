@@ -1,5 +1,6 @@
 package com.trademart.controllers;
 
+import static com.trademart.util.Logger.LogLevel.INFO;
 import static com.trademart.util.Logger.LogLevel.WARNING;
 
 import java.io.File;
@@ -141,7 +142,7 @@ public class UserRestController extends RestControllerBase {
     public ResponseEntity<String> fetchUserDataMapping(@PathVariable("user_id") int userID) {
         User user;
         try {
-            user = userController.getUserFromDB(userID);
+            user = userController.findUserById(userID);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -181,7 +182,7 @@ public class UserRestController extends RestControllerBase {
     public ResponseEntity<byte[]> updateProfilePictureMapping(@PathVariable("user_id") int userId){
         User user;
         try {
-            user = userController.getUserFromDB(userId);
+            user = userController.findUserById(userId);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -211,8 +212,9 @@ public class UserRestController extends RestControllerBase {
     @PostMapping("/user/{user_id}/avatar/update")
     public ResponseEntity<String> updateProfilePictureMapping(@PathVariable("user_id") int userId, @RequestHeader("Content-Disposition") String dispositionStr, @RequestBody byte[] content){
         User user;
+        Logger.log("updating avatar...", INFO);
         try {
-            user = userController.getUserFromDB(userId);
+            user = userController.findUserById(userId);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
@@ -222,6 +224,7 @@ public class UserRestController extends RestControllerBase {
             return internalServerErrorResponse();
         }
         if(user == null){
+            Logger.log("user not found", INFO);
             return ResponseEntity.notFound().build();
         }
         ContentDisposition disposition = ContentDisposition.parse(dispositionStr);
@@ -229,6 +232,7 @@ public class UserRestController extends RestControllerBase {
             .createProfilePicturePath(mediaController.imagesDir(), userId, "jpg");
 
         try {
+            Logger.log("writing", INFO);
             mediaController.writeFileNoEncode(outputFilename, content);
         } catch (IOException e) {
             e.printStackTrace();
@@ -240,6 +244,7 @@ public class UserRestController extends RestControllerBase {
         if(fileExtension != "jpg"){
             FFmpegUtil.encodeFile(outputFilename, "jpg");
         }
+        Logger.log("saving to db...", INFO);
         userController.updateProfilePicture(userId, outputFilename);
         Logger.log("Profile picture of user: " + userId + "has been updated", LogLevel.INFO);
         return ResponseEntity.ok("");

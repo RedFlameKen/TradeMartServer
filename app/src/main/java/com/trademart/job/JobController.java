@@ -292,6 +292,35 @@ public class JobController {
         return transaction;
     }
 
+    public ArrayList<JobTransaction> getAllJobTransactionsByJobId(int jobId) throws InterruptedException, SQLException{
+        ArrayList<JobTransaction> transactions = new ArrayList<>();
+        String command = "select * from job_transactions where job_id=? order by date_published desc";
+        sharedResource.lock();
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, jobId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            JobTransaction.Builder builder = new JobTransaction.Builder();
+            Timestamp dateStarted = rs.getTimestamp("date_started");
+            if(!rs.wasNull()){
+                builder.setDateStarted(dateStarted.toLocalDateTime());
+            }
+            Timestamp dateFinished = rs.getTimestamp("date_finished");
+            if(!rs.wasNull()){
+                builder.setDateFinished(dateFinished.toLocalDateTime());
+            }
+            transactions.add(builder
+                .setTransactionId(rs.getInt("id"))
+                .setJobId(rs.getInt("job_id"))
+                .setEmployeeId(rs.getInt("employee_id"))
+                .setEmployerId(rs.getInt("employer_id"))
+                .setCompleted(rs.getBoolean("completed"))
+                .build());
+        }
+        sharedResource.unlock();
+        return transactions;
+    }
+
     public ArrayList<JobTransaction> getAllJobTransactionsByEmployeeId(int employeeId) throws InterruptedException, SQLException{
         ArrayList<JobTransaction> transactions = new ArrayList<>();
         String command = "select * from job_transactions where employee_id=? order by date_published desc";

@@ -161,7 +161,7 @@ public class FeedRestController extends RestControllerBase {
     }
 
     private FeedItem likePost(int userId, int postId) throws InterruptedException, SQLException{
-        User user = userController.getUserFromDB(userId);
+        User user = userController.findUserById(userId);
         Post post = postController.findPostByID(postId);
         boolean isLiking = !postController.userHasLiked(userId, postId);
         postController.likePost(post, userId, isLiking);
@@ -176,7 +176,7 @@ public class FeedRestController extends RestControllerBase {
     }
 
     private FeedItem likeService(int userId, int serviceId) throws InterruptedException, SQLException{
-        User user = userController.getUserFromDB(userId);
+        User user = userController.findUserById(userId);
         Service service = serviceController.findServiceByID(serviceId);
         boolean isLiking = !serviceController.userHasLiked(userId, serviceId);
         serviceController.likeService(service, userId, isLiking);
@@ -191,7 +191,7 @@ public class FeedRestController extends RestControllerBase {
     }
 
     private FeedItem likeJobListing(int userId, int jobId) throws InterruptedException, SQLException{
-        User user = userController.getUserFromDB(userId);
+        User user = userController.findUserById(userId);
         JobListing job = jobController.findJobByID(jobId);
         boolean isLiking = !jobController.userHasLiked(userId, jobId);
         jobController.likeJob(job, userId, isLiking);
@@ -271,7 +271,7 @@ public class FeedRestController extends RestControllerBase {
             }
         } while (isLoaded(selected.getServiceId(), FeedType.SERVICE, loadedFeeds) ||
                 !categoryFilterPasses(categories, categoryFilter));
-        User user = userController.getUserFromDB(selected.getOwnerId());
+        User user = userController.findUserById(selected.getOwnerId());
         ArrayList<Integer> mediaIds = serviceController.getServiceMediaIDs(selected.getServiceId());
         return new FeedItem.Builder()
             .setId(selected.getServiceId())
@@ -307,7 +307,7 @@ public class FeedRestController extends RestControllerBase {
             }
         } while(isLoaded(selected.getId(), FeedType.JOB_LISTING, loadedFeeds) ||
                 !categoryFilterPasses(categories, categoryFilter));
-        User user = userController.getUserFromDB(selected.getEmployerId());
+        User user = userController.findUserById(selected.getEmployerId());
         ArrayList<Integer> mediaIds = jobController.getJobMediaIDs(selected.getId());
         return new FeedItem.Builder()
             .setId(selected.getId())
@@ -336,7 +336,7 @@ public class FeedRestController extends RestControllerBase {
         } while(isLoaded(selected.getPostId(), FeedType.POST, loadedFeeds) ||
                 !categoryFilterPasses(categories, categoryFilter));
         ArrayList<Integer> mediaIds = postController.getPostMediaIDs(selected.getPostId());
-        User user = userController.getUserFromDB(selected.getUserId());
+        User user = userController.findUserById(selected.getUserId());
         return new FeedItem.Builder()
             .setId(selected.getPostId())
             .setTitle(selected.getTitle())

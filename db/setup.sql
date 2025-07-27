@@ -44,6 +44,26 @@ create table if not exists skill_rating (
     foreign key(rater_id) references users(user_id)
 );
 
+create table if not exists job_ratings (
+    id int primary key,
+    rating double,
+    comment varchar(1024) default "",
+    rater_id int,
+    job_transaction_id int,
+    foreign key(rater_id) references users(user_id),
+    foreign key(job_transaction_id) references job_transactions(id)
+);
+
+create table if not exists service_ratings (
+    id int primary key,
+    rating double,
+    comment varchar(1024),
+    rater_id int,
+    service_id int,
+    foreign key(rater_id) references users(user_id),
+    foreign key(service_id) references services(service_id)
+);
+
 create table if not exists text_messages (
     message_id int primary key,
     target_user_id int,

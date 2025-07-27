@@ -133,7 +133,7 @@ public class PostRestController extends RestControllerBase {
         User user;
         try {
             createdPost = publishPost(json, userId, categories);
-            user = userController.getUserFromDB(userId);
+            user = userController.findUserById(userId);
         } catch (JSONException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
@@ -235,7 +235,7 @@ public class PostRestController extends RestControllerBase {
     public ResponseEntity<String> fetchPostsByUser(@PathVariable("user_id") int userId, @RequestBody String loadedIds){
         User user;
         try {
-            user = userController.getUserFromDB(userId);
+            user = userController.findUserById(userId);
         } catch (InterruptedException e) {
             sharedResource.unlock();
             e.printStackTrace();
