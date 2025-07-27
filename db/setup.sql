@@ -196,7 +196,7 @@ create table if not exists convos (
 
 create table if not exists chats (
     chat_id int primary key,
-    convo_type varchar(7),
+    type varchar(7),
     time_sent datetime,
     sender_id int,
     convo_id int,

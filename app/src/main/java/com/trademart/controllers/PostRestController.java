@@ -7,6 +7,7 @@ import java.io.StringReader;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import org.apache.tomcat.util.http.parser.ContentRange;
@@ -342,6 +343,7 @@ public class PostRestController extends RestControllerBase {
             .setDescription(description)
             .setUserId(userId)
             .setPostId(id)
+            .setDatePosted(LocalDateTime.now())
             .setLikes(0)
             .build();
         postController.insertPostToDB(post, categories);

@@ -210,11 +210,31 @@ public class FeedRestController extends RestControllerBase {
         ArrayList<Post> posts = postController.getAllPostsFromDB();
         ArrayList<Service> services = serviceController.getAllServices();
         ArrayList<JobListing> jobs = jobController.getAllJobListingsFromDB();
-        for (int i = 0; i < FEED_SEND_COUNT; i++) {
+        boolean postsAvailable = true;
+        boolean jobsAvailable = true;
+        boolean servicesAvailable = true;
+        if(posts.size() == 0){
+            postsAvailable = false;
+        }
+        if(jobs.size() == 0){
+            jobsAvailable = false;
+        }
+        if(services.size() == 0){
+            servicesAvailable = false;
+        }
+        if(!postsAvailable && !jobsAvailable && !servicesAvailable){
+            return feeds;
+        }
+        int postsTotal = services.size()+posts.size()+jobs.size();
+        int feedsToLoad = FEED_SEND_COUNT;
+        if(postsTotal < FEED_SEND_COUNT){
+            feedsToLoad = postsTotal;
+        }
+        for (int i = 0; i < feedsToLoad; i++) {
             FeedItem item = null;
             FeedCategory categoryFilter = decideCategory(userId);
             do {
-                switch (decideFeedType()) {
+                switch (decideFeedType(postsAvailable, jobsAvailable, servicesAvailable)) {
                     case JOB_LISTING:
                         item = decideJobListingFeed(jobs, loadedFeeds, categoryFilter);
                         break;
@@ -367,17 +387,23 @@ public class FeedRestController extends RestControllerBase {
         return (int) ((Math.random() * end) + start);
     }
 
-    private FeedType decideFeedType(){
-        switch (randomNumber(1, 3)) {
-            case 1:
-                return FeedType.POST;
-            case 2:
-                return FeedType.SERVICE;
-            case 3:
-                return FeedType.JOB_LISTING;
-            default:
-                return FeedType.SERVICE;
-        }
+    private FeedType decideFeedType(boolean postsAvailable, boolean jobsAvailable, boolean servicesAvailable){
+        do {
+            switch (randomNumber(1, 3)) {
+                case 1:
+                    if(!postsAvailable) continue;
+                    return FeedType.POST;
+                case 2:
+                    if(!servicesAvailable) continue;
+                    return FeedType.SERVICE;
+                case 3:
+                    if(!jobsAvailable) continue;
+                    return FeedType.JOB_LISTING;
+                default:
+                    if(!servicesAvailable) continue;
+                    return FeedType.SERVICE;
+            }
+        } while (true);
     }
 
     

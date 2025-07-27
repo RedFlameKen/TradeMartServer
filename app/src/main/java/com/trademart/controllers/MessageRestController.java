@@ -257,6 +257,7 @@ public class MessageRestController extends RestControllerBase {
         int userId = json.getInt("user_id");
         JSONObject convosJson = new JSONObject();
         try {
+            JSONArray convosArr = new JSONArray();
             ArrayList<Convo> convos = messageController.findConvosByUserId(userId);
             for (Convo convo : convos) {
                 User user1 = userController.findUserById(convo.getUser1Id());
@@ -282,8 +283,9 @@ public class MessageRestController extends RestControllerBase {
                     .put("convo_id", convo.getConvoId())
                     .put("last_chat", chatJson);
 
-                convosJson.append("convos", convoJson);
+                convosArr.put(convoJson);
             }
+            convosJson.put("convos", convosArr);
         } catch (InterruptedException | SQLException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError()

@@ -1,7 +1,6 @@
 package com.trademart.controllers;
 
 import static com.trademart.util.Logger.LogLevel.INFO;
-import static com.trademart.util.Logger.LogLevel.WARNING;
 
 import java.io.File;
 import java.io.IOException;
@@ -63,7 +62,17 @@ public class UserRestController extends RestControllerBase {
                 .body(createUserResponse("failed", "no such user exists", null)
                         .toString());
         }
-        String responseBody = userLoginProcess(json);
+        String responseBody;
+        try {
+            responseBody = userLoginProcess(json);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         return ResponseEntity.ok().body(responseBody);
     }
 
@@ -76,7 +85,21 @@ public class UserRestController extends RestControllerBase {
             return ResponseEntity.badRequest().body("");
         }
         URI location = URI.create("");
-        JSONObject response = userCreationProcess(json);
+        Logger.log("starting user creation process", INFO);
+        JSONObject response;
+        try {
+            response = userCreationProcess(json);
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return badRequestResponse("received a badly formatted request");
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
         if (response.getString("status").equals("success")) {
             JSONObject userJson = response.getJSONObject("user_data");
             location = URI.create(new StringBuilder()
@@ -250,7 +273,7 @@ public class UserRestController extends RestControllerBase {
         return ResponseEntity.ok("");
     }
 
-    private String userLoginProcess(JSONObject json) {
+    private String userLoginProcess(JSONObject json) throws InterruptedException, SQLException {
         String username = json.getString("username");
 
         if (!userController.userExists(username)) {
@@ -280,24 +303,16 @@ public class UserRestController extends RestControllerBase {
         return createUserResponse("success", "logged in successfully", user).toString();
     }
 
-    private JSONObject userCreationProcess(JSONObject json) throws JSONException {
+    private JSONObject userCreationProcess(JSONObject json) throws JSONException, InterruptedException, SQLException {
         String username = json.getString("username");
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            Logger.log("Unable to lock resources for user creation", WARNING);
-        }
 
         if (userController.userExists(username)) {
-            sharedResource.unlock();
             return createUserResponse("failed", "A user with that username already exists", new UserBuilder()
                     .setUsername(username)
                     .build());
         }
 
         int id = IDGenerator.generateDBID(sharedResource.getDatabaseController(), "users", "user_id");
-
-        sharedResource.unlock();
 
         String saltIV = json.getString("salt_iv");
         UserBuilder builder = new UserBuilder()

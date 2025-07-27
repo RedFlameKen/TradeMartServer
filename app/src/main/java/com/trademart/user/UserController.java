@@ -1,5 +1,6 @@
 package com.trademart.user;
 
+import static com.trademart.util.Logger.LogLevel.INFO;
 import static com.trademart.util.Logger.LogLevel.WARNING;
 
 import java.sql.PreparedStatement;
@@ -25,30 +26,23 @@ public class UserController {
         dbController = sharedResource.getDatabaseController();
     }
 
-    public boolean userExists(String username) {
+    public boolean userExists(String username) throws InterruptedException, SQLException {
         if (findUserByUsername(username) != null) {
+            Logger.log("user does exist", INFO);
             return true;
         }
+        Logger.log("NOT", INFO);
         return false;
     }
 
-    public User findUserByUsername(String username) {
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public User findUserByUsername(String username) throws InterruptedException, SQLException {
+        sharedResource.lock();
         User user = null;
-        try {
-            String command = "select * from users where username='" + username + "'";
-            if (dbController.getCommandRowCount(command) < 1) {
-                return null;
-            }
-            ResultSet rs = dbController.execQuery(command);
-            user = getUserFromResultSet(rs);
-        } catch (SQLException e) {
-            Logger.log("Unable to get a user from the db", WARNING);
-        }
+        String command = "select * from users where username=?";
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setString(1, username);
+        ResultSet rs = prep.executeQuery();
+        user = getUserFromResultSet(rs);
         sharedResource.unlock();
         return user;
     }
@@ -111,12 +105,12 @@ public class UserController {
     }
 
     private User getUserFromResultSet(ResultSet rs) throws SQLException {
-        rs.next();
-        String profilePicturePath = rs.getString("profile_picture_path");
-        if(rs.wasNull()){
-            profilePicturePath = "";
-        }
-        return new UserBuilder()
+        if(rs.next()){
+            String profilePicturePath = rs.getString("profile_picture_path");
+            if(rs.wasNull()){
+                profilePicturePath = "";
+            }
+            return new UserBuilder()
                 .setId(rs.getInt("user_id"))
                 .setUsername(rs.getString("username"))
                 .setEmail(rs.getString("email"))
@@ -125,6 +119,8 @@ public class UserController {
                 .setVerified(rs.getBoolean("verified"))
                 .setProfilePicturePath(profilePicturePath)
                 .build();
+        }
+        return null;
     }
 
     public String createProfilePicturePath(String parent, int userId, String extension){
@@ -159,32 +155,24 @@ public class UserController {
         sharedResource.unlock();
     }
 
-    public void insertUserToDB(User user, String saltIV) {
-        try {
-            sharedResource.lock();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public void insertUserToDB(User user, String saltIV) throws InterruptedException, SQLException {
+        sharedResource.lock();
         String cmd = "insert into users(user_id, username, email, password, password_salt, verified) values (?, ?, ?, ?, ?, ?)";
         String decryptedPassword = new Decryptor(saltIV).decrypt(user.getPassword());
         Hasher hasher = new Hasher();
         String hashSalt = hasher.getSalt();
         String hashedPassword = hasher.hash(decryptedPassword);
-        try {
-            PreparedStatement prep = dbController.prepareStatement(cmd);
-            prep.setInt(1, user.getId());
-            prep.setString(2, user.getUsername());
-            prep.setString(3, user.getEmail());
-            prep.setString(4, hashedPassword);
-            prep.setString(5, hashSalt);
-            prep.setBoolean(6, false);
-            prep.execute();
-            prep.close();
+        PreparedStatement prep = dbController.prepareStatement(cmd);
+        prep.setInt(1, user.getId());
+        prep.setString(2, user.getUsername());
+        prep.setString(3, user.getEmail());
+        prep.setString(4, hashedPassword);
+        prep.setString(5, hashSalt);
+        prep.setBoolean(6, false);
+        prep.execute();
+        prep.close();
 
-            writeUserPreferencesToDb(user.getId());
-        } catch (SQLException e) {
-            Logger.log("Unable to insert user to db", WARNING);
-        }
+        writeUserPreferencesToDb(user.getId());
         sharedResource.unlock();
     }
 
