@@ -181,9 +181,7 @@ public class MessageRestController extends RestControllerBase {
                 convo = messageController.initConvo(user1Id, user2Id);
                 // return createBadRequestResponse("MessageRestController#fetchMessagesMapping()", "no convo found with user1_id and user2_id found");
             }
-            int receivedCount = json.getInt("received_count");
-            ArrayList<Chat> chats = messageController.getChatsInConvo(convo.getConvoId(), receivedCount,
-                    receivedCount + 10);
+            ArrayList<Chat> chats = messageController.getAllChatsInConvo(convo.getConvoId());
             responseJson = chatArrayToJSON(chats);
         } catch (InterruptedException | SQLException e) {
             e.printStackTrace();

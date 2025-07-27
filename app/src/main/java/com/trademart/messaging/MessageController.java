@@ -323,6 +323,26 @@ public class MessageController {
         return chat;
     }
 
+    public ArrayList<Chat> getAllChatsInConvo(int convoId) throws InterruptedException, SQLException{
+        ArrayList<Chat> chats = new ArrayList<>();
+        sharedResource.lock();
+
+        String command = "select * from chats where convo_id=? order by time_sent desc";
+
+        PreparedStatement prep = dbController.prepareStatement(command);
+        prep.setInt(1, convoId);
+        ResultSet rs = prep.executeQuery();
+        while(rs.next()){
+            int id = rs.getInt("chat_id");
+            ChatType type = ChatType.parse(rs.getString("type"));
+            chats.add(getChatById(id, type));
+        }
+        prep.close();
+
+        sharedResource.unlock();
+        return chats;
+    }
+
     public ArrayList<Chat> getChatsInConvo(int convoId, int startIndex, int endIndex) throws InterruptedException, SQLException{
         ArrayList<Chat> chats = new ArrayList<>();
         sharedResource.lock();
