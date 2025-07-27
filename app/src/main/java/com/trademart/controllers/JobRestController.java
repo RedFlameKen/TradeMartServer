@@ -228,6 +228,38 @@ public class JobRestController extends RestControllerBase {
                     .put("has_liked", hasLiked)).toString());
     }
 
+    @PostMapping("/jobs/{job_id}/applicationstatus")
+    public ResponseEntity<String> userHasAppliedMapping(@PathVariable("job_id") int jobId, @RequestBody String body){
+        int applicantId;
+        try {
+            JSONObject json = new JSONObject(new JSONTokener(body));
+            applicantId = json.getInt("applicant_id");
+        } catch (JSONException e){
+            e.printStackTrace();
+            return badRequestResponse("invalid request");
+        }
+        boolean isEmployed = false;
+        JSONObject json = new JSONObject();
+        try {
+            ArrayList<JobTransaction> transactions = jobController.getAllJobTransactionsByJobId(jobId);
+            for (JobTransaction jobTransaction : transactions) {
+                if(jobTransaction.getEmployeeId() == applicantId && !jobTransaction.isCompleted()){
+                    isEmployed = true;
+                }
+            }
+
+            json.put("is_employed", isEmployed);
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse();
+        }
+        return ResponseEntity.ok(json.toString());
+    }
+
     @PostMapping("/jobs/{job_id}/apply")
     public ResponseEntity<String> applyForJobMapping(@PathVariable("job_id") int jobId, @RequestBody String body){
         int employeeId;
