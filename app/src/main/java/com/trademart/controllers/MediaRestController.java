@@ -1,30 +1,28 @@
 package com.trademart.controllers;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.json.JSONObject;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.ResponseEntity.BodyBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.trademart.async.SharedResource;
-import com.trademart.db.DatabaseController;
 import com.trademart.media.MediaController;
 import com.trademart.post.PostController;
+import com.trademart.user.User;
 import com.trademart.user.UserController;
-import com.trademart.util.Encoder;
 import com.trademart.util.FileUtil;
 
 @RestController
@@ -110,6 +108,32 @@ public class MediaRestController extends RestControllerBase {
                 .filename(file.getName())
                 .build());
         return ResponseEntity.ok().headers(headers).body(bytes);
+    }
+
+    @PostMapping("/media/{user_id}/upload")
+    private ResponseEntity<String> uploadMediaMapping(@PathVariable("user_id") int userId, @RequestHeader("Content-Disposition") String dispositionStr, @RequestBody byte[] data){
+        String filename = ContentDisposition.parse(dispositionStr).getFilename();
+        int mediaId = -1;
+        try {
+            File file = mediaController.writeFile(filename, data);
+            String filepath = file.getAbsolutePath();
+            String ext = FileUtil.getExtension(file.getName());
+            if(ext.equals("mp4")){
+                filepath = FileUtil.removeExtension(filepath).concat(".m3u8");
+            }
+            mediaId = mediaController.generateMediaID();
+            mediaController.insertMediaToDB(filepath, mediaId, userId);
+        } catch (SQLException | IOException e) {
+            e.printStackTrace();
+            return internalServerErrorResponse("unable to upload media");
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse("unable to upload media");
+        }
+
+        return ResponseEntity.ok(createResponse("success", "image uploaded successfully")
+                .put("media_id", mediaId).toString());
     }
 
     @GetMapping("/media/{media_id}")

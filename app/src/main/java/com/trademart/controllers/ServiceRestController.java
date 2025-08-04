@@ -155,6 +155,10 @@ public class ServiceRestController extends RestControllerBase {
         } catch (SQLException | IOException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).header("Location",

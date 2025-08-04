@@ -223,6 +223,10 @@ public class PostRestController extends RestControllerBase {
         } catch (SQLException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
+        } catch (InterruptedException e) {
+            sharedResource.unlock();
+            e.printStackTrace();
+            return internalServerErrorResponse();
         }
         return ResponseEntity.status(HttpStatus.CREATED).header("Location",
                 new StringBuilder()
